@@ -40,7 +40,7 @@
         <m-typo-headline :level="6">Herramentales</m-typo-headline>
       </m-card>
       <m-card class="area--card card">
-        <m-icon-button icon="construction"></m-icon-button>
+        <m-icon-button icon="construction" @click="sendText('maintenance')"></m-icon-button>
         <m-typo-headline :level="6">Mantenimiento</m-typo-headline>
       </m-card>
       <m-card class="area--card card">
@@ -52,7 +52,8 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator'
+import { Vue, Component } from 'vue-property-decorator'
+import MessageService from '../services/MessageService'
 
 // @ts-ignore
 import Typography from 'material-components-vue/dist/typography'
@@ -85,8 +86,25 @@ export default class Home extends Vue {
   private plant = ''
   private machine = ''
   private message = ''
+  private phone = '+5218181757838'
 
-  private hseToggle = false
+  public sendText (area: string): void {
+    const data = {
+      plant: this.plant,
+      machine: this.machine,
+      area: area,
+      message: this.message,
+      phone: this.phone
+    }
+
+    MessageService.send(data)
+      .then((response: any) => {
+        console.log(response.data)
+      })
+      .catch((error: any) => {
+        console.log(error.response.data)
+      })
+  }
 }
 </script>
 
