@@ -1,92 +1,90 @@
 <template>
-  <m-typography class="home">
-    <m-typo-headline :level="2">
-      Sistema ANDON
-    </m-typo-headline>
+  <div class="home">
     <div class="selection">
-      <m-select v-model="plant" id="select-plant" enhanced>
-        <template slot="default">
-          <m-list-item data-value="planta1">Planta 1</m-list-item>
-          <m-list-item data-value="planta2">Planta 2</m-list-item>
-          <m-list-item data-value="planta3">Planta 3</m-list-item>
-        </template>
-        <m-floating-label for="select-plant" id="select-plant--label" slot="label">Planta</m-floating-label>
-        <m-line-ripple slot="line"/>
-      </m-select>
-      <m-select v-model="machine" id="select-machine" enhanced>
-        <template slot="default">
-          <m-list-item data-value="machine1">Maquina 1</m-list-item>
-          <m-list-item data-value="machine2">Maquina 2</m-list-item>
-          <m-list-item data-value="machine3">Maquina 3</m-list-item>
-        </template>
-        <m-floating-label for="select-machine" id="select-machine--label" slot="label">Máquina</m-floating-label>
-        <m-line-ripple slot="line"/>
-      </m-select>
-      <m-text-field v-model="message" id="select--message" outlined>
-        <m-floating-label for="select--message">Mensaje</m-floating-label>
-      </m-text-field>
+      <span class="p-float-label">
+        <Dropdown id="plants-dropdown" v-model="selectedPlant" :options="plants" optionLabel="name" placeholder="Selecciona la planta" :filter="true" />
+        <label for="plants-dropdown" v-show="plant.length">Planta</label>
+      </span>
+      <span class="p-float-label">
+        <Dropdown id="machines-dropdown" v-model="selectedMachine" :options="machines" optionLabel="name" placeholder="Selecciona la máquina" :filter="true" :disabled="!showMachines" />
+        <label for="machines-dropdown" v-show="machine.length">Máquina</label>
+      </span>
+      <InputText class="selection--message" type="text" v-model="message" />
     </div>
     <div class="area">
-      <m-card class="area--card card">
-        <m-icon-button icon="group_work"></m-icon-button>
-        <m-typo-headline :level="6">HSE</m-typo-headline>
-      </m-card>
-      <m-card class="area--card card">
-        <m-icon-button icon="supervisor_account"></m-icon-button>
-        <m-typo-headline :level="6">Operaciones</m-typo-headline>
-      </m-card>
-      <m-card class="area--card card">
-        <m-icon-button icon="build"></m-icon-button>
-        <m-typo-headline :level="6">Herramentales</m-typo-headline>
-      </m-card>
-      <m-card class="area--card card">
-        <m-icon-button icon="construction" @click="sendText('maintenance')"></m-icon-button>
-        <m-typo-headline :level="6">Mantenimiento</m-typo-headline>
-      </m-card>
-      <m-card class="area--card card">
-        <m-icon-button icon="local_police"></m-icon-button>
-        <m-typo-headline :level="6">Calidad</m-typo-headline>
-      </m-card>
+      <Button v-for="(value, key, index) in areas" :key="index" :label="value" @click="sendText(key)" class="area--button p-button-outlined p-button-info">
+        <template slot="content">{{ value }}</template>
+      </Button>
     </div>
-  </m-typography>
+  </div>
 </template>
 
 <script lang="ts">
-import { Vue, Component } from 'vue-property-decorator'
+import { Component, Watch, Vue } from 'vue-property-decorator'
 import MessageService from '../services/MessageService'
-
-// @ts-ignore
-import Typography from 'material-components-vue/dist/typography'
-// @ts-ignore
-import Select from 'material-components-vue/dist/select'
-// @ts-ignore
-import List from 'material-components-vue/dist/list'
-// @ts-ignore
-import TextField from 'material-components-vue/dist/text-field'
-// @ts-ignore
-import Card from 'material-components-vue/dist/card'
-// @ts-ignore
-import IconButton from 'material-components-vue/dist/icon-button'
-// @ts-ignore
-import FloatingLabel from 'material-components-vue/dist/floating-label'
-// @ts-ignore
-import LineRipple from 'material-components-vue/dist/line-ripple'
-
-Vue.use(Typography)
-Vue.use(Select)
-Vue.use(List)
-Vue.use(TextField)
-Vue.use(Card)
-Vue.use(IconButton)
-Vue.use(FloatingLabel)
-Vue.use(LineRipple)
 
 @Component
 export default class Home extends Vue {
-  private plant = ''
-  private machine = ''
+  private selectedPlant = { name: '' }
+  private selectedMachine = { name: '' }
+  private showMachines = false
+  private plants: { name: string }[] = []
+  private machines: { name: string }[] = []
   private message = ''
   private phone = '+5218181757838'
+  private areas = {
+    hse: 'HSE',
+    operations: 'Operaciones',
+    tooling: 'Herramentales',
+    maintenance: 'Mantenimiento',
+    quality: 'Calidad'
+  }
+
+  get plant (): string {
+    return this.selectedPlant.name
+  }
+
+  get machine (): string {
+    return this.selectedMachine.name
+  }
+
+  mounted () {
+    this.plants = this.getPlants()
+  }
+
+  @Watch('selectedPlant')
+  public fetchMachines () {
+    this.showMachines = false // Wait until we receive data from server
+    // TODO: Get the plant's machines from server
+    this.machines = this.getMachines(this.plant)
+    this.showMachines = true
+  }
+
+  public getPlants (): { name: string }[] {
+    const plants = [
+      { name: 'Alameda' },
+      { name: 'Calabazas' },
+      { name: 'Murrieta' }
+    ]
+    return plants
+  }
+
+  public getMachines (plant: string): { name: string }[] {
+    switch (plant) {
+      case 'Calabazas':
+        return [
+          { name: '10' },
+          { name: '11' },
+          { name: '12' }
+        ]
+      default:
+        return [
+          { name: '90' },
+          { name: '91' },
+          { name: '92' }
+        ]
+    }
+  }
 
   public sendText (area: string): void {
     const data = {
@@ -99,71 +97,51 @@ export default class Home extends Vue {
 
     MessageService.send(data)
       .then((response: any) => {
-        console.log(response.data)
+        this.$toast.add({ severity: 'success', summary: 'Mensaje mandado!', detail: response.data, life: 3000 })
       })
       .catch((error: any) => {
-        console.log(error.response.data)
+        const errorMessage = error.response ? error.response.data : 'No se pudo conectar con el servidor.'
+        this.$toast.add({ severity: 'error', summary: errorMessage, detail: 'Porfavor intentelo de nuevo', life: 3000 })
       })
   }
 }
 </script>
 
-<style lang="scss">
-@import "material-components-vue/dist/typography/styles";
-@import "material-components-vue/dist/select/styles";
-@import "material-components-vue/dist/list/styles";
-@import "material-components-vue/dist/text-field/styles";
-@import "material-components-vue/dist/card/styles";
-@import "material-components-vue/dist/icon-button/styles";
-@import "material-components-vue/dist/floating-label/styles";
-@import "material-components-vue/dist/line-ripple/styles";
-
+<style lang="scss" scoped>
 .selection {
-  margin-top: 36px;
+  $margin-between-components: 8px;
+
   display: flex;
   flex-direction: row;
-  width: 100%;
   flex-wrap: wrap;
+  margin-right: -$margin-between-components;
+  margin-bottom: 24px;
 
   > * {
-    margin-right: 8px;
-    margin-bottom: 8px;
-    flex-grow: 1;
+    margin-right: $margin-between-components;
+    margin-bottom: $margin-between-components;
   }
 
-  > :last-child {
-    flex-grow: 2;
+  &--message {
+    flex-grow: 1;
   }
 }
 
 .area {
-  margin-top: 24px;
+  $margin-between-cards: 12px;
+
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  justify-content: space-evenly;
+  margin-right: -$margin-between-cards;
 
-  > * {
-    margin-right: 8px;
-    margin-bottom: 8px;
-  }
-
-  .card {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+  &--button {
+    margin-right: $margin-between-cards;
+    margin-bottom: $margin-between-cards;
+    flex-grow: 1;
     text-align: center;
-    padding: 8px;
-  }
-
-  .mdc-icon-button {
-    $icon-size: 72px;
-    $area-size: calc(#{$icon-size} * 2);
-
-    width: $area-size;
-    height: $area-size;
-    font-size: $icon-size;
-    color: $mdc-theme-primary;
+    font-weight: bold;
+    font-size: 24px;
   }
 }
 </style>
