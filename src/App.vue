@@ -1,26 +1,24 @@
 <template>
   <div id="app">
-    <m-theme>
-    <!-- <div class="nav">
-      <router-link to="/">Home</router-link> |
-      <router-link to="/about">About</router-link>
-    </div> -->
-      <router-view/>
-    </m-theme>
+    <Header class="header" title="Sistema ANDON"></Header>
+    <router-view/>
+
+    <Toast />
   </div>
 </template>
 
 <script lang="ts">
-import { Vue } from 'vue-property-decorator'
+import { Component, Vue } from 'vue-property-decorator'
+import Header from './components/Header.vue'
 
-// @ts-ignore
-import Theme from 'material-components-vue/dist/theme'
-
-Vue.use(Theme)
-
-export default { }
+@Component({
+  components: {
+    Header
+  }
+})
+export default class App extends Vue { }
 </script>
 
-<style lang="scss">
+<style lang="scss" scoped>
 @import "@/styles/styles";
 </style>
