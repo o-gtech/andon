@@ -109,6 +109,9 @@
 
 <script lang="ts">
 import { Component, Watch, Vue, Ref } from 'vue-property-decorator'
+
+import PlantService from '../services/PlantService'
+import MachineService from '../services/MachineService'
 import MessageService from '../services/MessageService'
 
 import ActionsMenu from '../components/ActionsMenu.vue'
@@ -241,7 +244,7 @@ export default class Home extends Vue {
   }
 
   mounted () {
-    this.plants = this.getPlants()
+    this.retrievePlants()
     this.categories = this.getCategories()
   }
 
@@ -249,8 +252,7 @@ export default class Home extends Vue {
   public fetchMachines () {
     if (this.selectedPlant && this.plant) {
       this.showMachines = false // Wait until we receive data from server
-      // TODO: Get the plant's machines from server
-      this.machines = this.getMachines(this.plant)
+      this.retrieveMachines(this.plant)
       this.showMachines = true
       this.formErrors.plant = false
     } else {
@@ -301,30 +303,12 @@ export default class Home extends Vue {
     commentTextArea.focus()
   }
 
-  public getPlants (): Record[] {
-    const plants = [
-      { name: 'Alameda' },
-      { name: 'Calabazas' },
-      { name: 'Murrieta' }
-    ]
-    return plants
+  public retrievePlants (): void {
+    this.plants = PlantService.getAll()
   }
 
-  public getMachines (plant: string): Record[] {
-    switch (plant) {
-      case 'Calabazas':
-        return [
-          { name: '10' },
-          { name: '11' },
-          { name: '12' }
-        ]
-      default:
-        return [
-          { name: '90' },
-          { name: '91' },
-          { name: '92' }
-        ]
-    }
+  public retrieveMachines (fromPlant: string): void {
+    this.machines = MachineService.getAll(fromPlant)
   }
 
   public getCategories (): CategoryRecord[] {
@@ -403,11 +387,11 @@ export default class Home extends Vue {
     // TODO: Send the area as argument to be able to identify to whom we are sending the message
     MessageService.send(message)
       .then((response: any) => {
-        this.$toast.add({ severity: 'success', summary: 'Mensaje mandado!', detail: response.data, life: 3000 })
+        this.$toast.add({ severity: 'success', summary: 'Mensaje enviado!', detail: response.data, life: 3000 })
         messageSent = true
       })
       .catch((error: any) => {
-        const errorMessage = error.response ? error.response.data : 'No se pudo conectar con el servidor.'
+        const errorMessage = error.response ? error.response.data : 'No se pudo conectar con el servidor'
         this.$toast.add({ severity: 'error', summary: errorMessage, detail: 'Porfavor intentelo de nuevo', life: 3000 })
         messageSent = false
       })
