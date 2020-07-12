@@ -1,18 +1,54 @@
 <template>
   <div class="home">
-    <div class="selection">
-      <span class="p-float-label">
-        <Dropdown id="plants-dropdown" v-model="selectedPlant" :options="plants" optionLabel="name" placeholder="Selecciona la planta" :filter="true" />
-        <label for="plants-dropdown" v-show="plant.length">Planta</label>
+    <div class="selection card">
+      <span class="selection--dropdown p-float-label">
+        <Dropdown id="plants-dropdown"
+          v-model="selectedPlant"
+          :options="plants"
+          optionLabel="name"
+          placeholder="Selecciona la planta"
+          :filter="true"
+        />
+        <label for="plants-dropdown">Planta</label>
       </span>
-      <span class="p-float-label">
-        <Dropdown id="machines-dropdown" v-model="selectedMachine" :options="machines" optionLabel="name" placeholder="Selecciona la máquina" :filter="true" :disabled="!showMachines" />
-        <label for="machines-dropdown" v-show="machine.length">Máquina</label>
+      <span class="selection--dropdown p-float-label">
+        <Dropdown id="machines-dropdown"
+          v-model="selectedMachine"
+          :options="machines"
+          optionLabel="name"
+          placeholder="Selecciona la máquina"
+          :filter="true"
+          :disabled="!showMachines"
+        />
+        <label for="machines-dropdown">Máquina</label>
       </span>
-      <InputText class="selection--message" type="text" v-model="message" />
+      <div class="selection--message message">
+        <span class="message--input p-float-label">
+          <InputText id="message"
+            ref="message"
+            type="text"
+            v-model="message"
+            @focus="showMessageTemplates = true"
+          />
+          <label for="message">Mensaje</label>
+        </span>
+        <div class="message--templates" :class="{ 'message--templates__visible': showMessageTemplates }">
+          <Button class="p-button-secondary p-button-rounded"
+            v-for="(value, index) in messageTemplates"
+            :key="index"
+            :label="value.message + (value.edit ? '...' : '')"
+            @click="setMessage(value.message, value.edit)"
+          />
+        </div>
+      </div>
     </div>
-    <div class="area">
-      <Button v-for="(value, key, index) in areas" :key="index" :label="value" @click="sendText(key)" class="area--button p-button-outlined p-button-info">
+    <div class="area card">
+      <Button class="area--button p-button-outlined p-button-info"
+        v-for="(value, key, index) in areas"
+        :key="index"
+        :label="value"
+        @click="sendText(key)"
+      >
         <template slot="content">{{ value }}</template>
       </Button>
     </div>
@@ -23,14 +59,30 @@
 import { Component, Watch, Vue } from 'vue-property-decorator'
 import MessageService from '../services/MessageService'
 
+interface Record {
+  readonly name: string;
+}
+
+const emptyRecord: Record = {
+  name: ''
+}
+
 @Component
 export default class Home extends Vue {
-  private selectedPlant = { name: '' }
-  private selectedMachine = { name: '' }
+  private selectedPlant = emptyRecord
+  private selectedMachine = emptyRecord
   private showMachines = false
-  private plants: { name: string }[] = []
-  private machines: { name: string }[] = []
+  private plants: Record[] = []
+  private machines: Record[] = []
   private message = ''
+  private showMessageTemplates = false
+  private messageTemplates = [
+    { message: 'Mantenimiento', edit: false },
+    { message: 'Falta de ', edit: true },
+    { message: 'Cambio de ', edit: true },
+    { message: 'Inspección', edit: false }
+  ]
+
   private phone = '+5218181757838'
   private areas = {
     hse: 'HSE',
@@ -60,7 +112,17 @@ export default class Home extends Vue {
     this.showMachines = true
   }
 
-  public getPlants (): { name: string }[] {
+  @Watch('selectedMachine')
+  public activateMessageTemplates () {
+    this.focusMessageInput()
+    this.showMessageTemplates = true
+  }
+
+  public focusMessageInput () {
+    ((this.$refs.message as Vue).$el as SVGElement).focus() // https://forum.vuejs.org/t/vetur-bug-or-code-error-property-el-does-not-exist-on-type-svgelement/73696
+  }
+
+  public getPlants (): Record[] {
     const plants = [
       { name: 'Alameda' },
       { name: 'Calabazas' },
@@ -69,7 +131,7 @@ export default class Home extends Vue {
     return plants
   }
 
-  public getMachines (plant: string): { name: string }[] {
+  public getMachines (plant: string): Record[] {
     switch (plant) {
       case 'Calabazas':
         return [
@@ -84,6 +146,14 @@ export default class Home extends Vue {
           { name: '92' }
         ]
     }
+  }
+
+  public setMessage (text: string, edit: boolean): void {
+    this.message = text
+    if (edit) {
+      this.focusMessageInput()
+    }
+    this.showMessageTemplates = false
   }
 
   public sendText (area: string): void {
@@ -108,6 +178,16 @@ export default class Home extends Vue {
 </script>
 
 <style lang="scss" scoped>
+.card {
+  background-color: var(--surface-e);
+  padding: 2rem;
+  border-radius: 6px;
+  box-shadow: 0 0 12px -2px rgba(0, 0, 0, 0.1);
+
+  margin-left: 12px !important;
+  margin-right: 12px !important;
+}
+
 .selection {
   $margin-between-components: 8px;
 
@@ -122,13 +202,52 @@ export default class Home extends Vue {
     margin-bottom: $margin-between-components;
   }
 
+  // &--dropdown {
+  //   > label {
+  //     z-index: -1; // Fix floating label overlapping placeholder
+  //   }
+
+  //   > .p-disabled + label {
+  //     opacity: 0; // Fix floating label overlapping placeholder on disabled input
+  //   }
+  // }
+
   &--message {
     flex-grow: 1;
+  }
+
+  .message {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+
+    &--input input {
+      width: 100%;
+    }
+
+    &--templates {
+      transition: all 0.5s;
+      opacity: 0;
+      height: 0;
+      overflow: hidden;
+      padding: 4px;
+
+      &__visible {
+        opacity: 1;
+        height: auto;
+        margin-top: 12px;
+      }
+
+      button {
+        margin-right: 8px;
+        margin-bottom: 8px;
+      }
+    }
   }
 }
 
 .area {
-  $margin-between-cards: 12px;
+  $margin-between-cards: 8px;
 
   display: flex;
   flex-direction: row;
