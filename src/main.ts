@@ -11,7 +11,7 @@ import ToastService from 'primevue/toastservice'
 import Dropdown from 'primevue/dropdown'
 import Card from 'primevue/card'
 
-import 'primevue/resources/themes/nova/theme.css'
+import 'primevue/resources/themes/arya-blue/theme.css'
 import 'primevue/resources/primevue.min.css'
 import 'primeicons/primeicons.css'
 
