@@ -1,15 +1,17 @@
 <template>
   <div id="app">
-    <Header class="header" title="Sistema ANDON"></Header>
-    <router-view/>
+    <div class="container">
+      <Header class="header"></Header>
+      <router-view/>
 
-    <Toast />
+      <Toast class="toast" position="bottom-center" />
+    </div>
   </div>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import Header from './components/Header.vue'
+import Header from './components/Header/Header.vue'
 
 @Component({
   components: {
