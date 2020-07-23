@@ -1,6 +1,9 @@
 <template>
   <div class="home">
-    <h1 class="home__title">Nuevo Reporte</h1>
+    <div class="home__header">
+      <h1 class="home__title">Nuevo Reporte</h1>
+      <Zoom />
+    </div>
     <div class="selection card">
       <div class="card__title">Datos del reporte</div>
       <div class="card__container selection__50-50">
@@ -98,6 +101,8 @@
 import { Component, Watch, Vue } from 'vue-property-decorator'
 import MessageService from '../services/MessageService'
 
+import Zoom from '../components/Zoom.vue'
+
 interface Record {
   readonly name: string;
 }
@@ -116,7 +121,11 @@ const emptyCategoryRecord: CategoryRecord = {
   severity: 0
 }
 
-@Component
+@Component({
+  components: {
+    Zoom
+  }
+})
 export default class Home extends Vue {
   private selectedPlant = emptyRecord
   private selectedMachine = emptyRecord
@@ -177,6 +186,10 @@ export default class Home extends Vue {
 
   get machine (): string {
     return this.selectedMachine.name
+  }
+
+  get category (): string {
+    return this.selectedCategory.name
   }
 
   mounted () {
@@ -271,9 +284,9 @@ export default class Home extends Vue {
 
   public isValidForm (): boolean {
     this.formErrors = {
-      plant: this.selectedPlant.name === '',
-      machine: this.selectedMachine.name === '',
-      category: this.selectedCategory.name === ''
+      plant: this.plant === '',
+      machine: this.machine === '',
+      category: this.category === ''
     }
 
     const errors = Object.values(this.formErrors)
@@ -324,8 +337,17 @@ $gap: 1rem;
     }
   }
 
+  &__header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 2rem;
+  }
+
   &__title {
-    text-align: center;
+    // text-align: center;
+    // margin-left: 2rem;
     font-size: 2rem;
   }
 }
