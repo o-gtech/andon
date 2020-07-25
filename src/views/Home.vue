@@ -15,9 +15,10 @@
             :options="plants"
             optionLabel="name"
             placeholder="Selecciona la planta"
-            :filter="true"
+            :filter="plants.length > 6"
+            filterPlaceholder="Busca la planta"
           />
-          <small class="p-error" v-show="formErrors.plant">Selecciona una planta.</small>
+          <InlineMessage severity="error" v-show="formErrors.plant">Selecciona una planta</InlineMessage>
         </div>
         <div class="selection__wrapper">
           <div class="selection__title">Máquina</div>
@@ -27,10 +28,11 @@
             :options="machines"
             optionLabel="name"
             placeholder="Selecciona la máquina"
-            :filter="true"
+            :filter="machines.length > 6"
+            filterPlaceholder="Busca la máquina"
             :disabled="!showMachines"
           />
-          <small class="p-error" v-show="formErrors.machine">Selecciona una máquina.</small>
+          <InlineMessage severity="error" v-show="formErrors.machine">Selecciona una máquina</InlineMessage>
         </div>
       </div>
 
@@ -44,19 +46,20 @@
             optionLabel="name"
             listStyle="max-height: 8rem"
             :filter="categories.length > 6"
+            filterPlaceholder="Busca la categoría"
           >
             <template #option="slotProps">
               <div class="listbox__item">
-                <span>{{slotProps.option.name}}</span>
-                <span class="p-badge"
+                <span class="listbox__item-badge p-badge"
                   :class="'p-badge-' + getSeverityStatus(slotProps.option.severity)"
                 >
                   {{slotProps.option.severity}}
                 </span>
+                <span class="listbox__item-name">{{slotProps.option.name}}</span>
               </div>
             </template>
           </Listbox>
-          <small class="p-error" v-show="formErrors.category">Selecciona una categoría.</small>
+          <InlineMessage severity="error" v-show="formErrors.category">Selecciona una categoría</InlineMessage>
         </div>
         <div class="comment">
           <span class="comment__wrapper p-float-label">
@@ -84,13 +87,15 @@
     <div class="area card">
       <div class="card__title">Mandar a area</div>
       <div class="card__container">
-        <Button class="area__button p-button"
+        <Button class="area__button"
           v-for="(value, key, index) in areas"
           :key="index"
           :label="value"
-          @click="sendText(key)"
+          :ref="key"
+          @click="areaButtonClickHandler($event, key)"
         >
           {{ value }}
+          <i class="pi pi-arrow-up"></i>
         </Button>
       </div>
     </div>
@@ -221,7 +226,7 @@ export default class Home extends Vue {
   }
 
   public focusCommentInput () {
-    ((this.$refs.comment as Vue).$el as SVGElement).focus() // https://forum.vuejs.org/t/vetur-bug-or-code-error-property-el-does-not-exist-on-type-svgelement/73696
+    ((this.$refs.comment as Vue).$el as HTMLElement).focus() // https://forum.vuejs.org/t/vetur-bug-or-code-error-property-el-does-not-exist-on-type-svgelement/73696
   }
 
   public getPlants (): Record[] {
@@ -282,7 +287,7 @@ export default class Home extends Vue {
     this.showCommentTemplates = false
   }
 
-  public isValidForm (): boolean {
+  private _validateForm (): boolean {
     this.formErrors = {
       plant: this.plant === '',
       machine: this.machine === '',
@@ -300,7 +305,19 @@ export default class Home extends Vue {
     return true
   }
 
-  public sendText (area: string): void {
+  private _animateSendButton (button: HTMLElement, sent: boolean) {
+    const animationClass = 'area__button--' + (sent ? 'sent' : 'error')
+
+    button.classList.add(animationClass)
+    button.blur()
+
+    // Remove after animation ends to be able to trigger it again
+    setTimeout(() => {
+      button.classList.remove(animationClass)
+    }, 4000)
+  }
+
+  private _sendText (area: string): boolean {
     const data = {
       plant: this.plant,
       machine: this.machine,
@@ -308,32 +325,53 @@ export default class Home extends Vue {
       comment: this.comment,
       phone: this.phone
     }
-
-    if (!this.isValidForm()) {
-      return
-    }
+    let sentText = false
 
     MessageService.send(data)
       .then((response: any) => {
         this.$toast.add({ severity: 'success', summary: 'Mensaje mandado!', detail: response.data, life: 3000 })
+        // TODO: Block send multiple times a message
+        sentText = true
       })
       .catch((error: any) => {
         const errorMessage = error.response ? error.response.data : 'No se pudo conectar con el servidor.'
         this.$toast.add({ severity: 'error', summary: errorMessage, detail: 'Porfavor intentelo de nuevo', life: 3000 })
+        sentText = false
       })
+
+    return sentText
+  }
+
+  public areaButtonClickHandler (event: any, area: string) {
+    if (!this._validateForm()) {
+      this._animateSendButton(event.target, false)
+      return
+    }
+
+    const sentText = this._sendText(area)
+    this._animateSendButton(event.target, sentText)
   }
 }
 </script>
 
 <style lang="scss" scoped>
-$gap: 1rem;
+@mixin gap-between-items($gap: 1rem, $children: "*") {
+  margin: -#{$gap} 0 0 -#{$gap};
+  width: calc(100% + #{$gap});
+
+  @each $child in $children {
+    > #{$child} {
+      margin: $gap 0 0 $gap;
+    }
+  }
+}
 
 .home {
   > .card {
     margin-bottom: 1.5rem;
 
     &:last-child {
-      margin-bottom: 0;
+      margin-bottom: 2rem;
     }
   }
 
@@ -342,12 +380,10 @@ $gap: 1rem;
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: 0 2rem;
+    padding: 0 1rem;
   }
 
   &__title {
-    // text-align: center;
-    // margin-left: 2rem;
     font-size: 2rem;
   }
 }
@@ -356,7 +392,7 @@ $gap: 1rem;
   background-color: var(--surface-e);
   padding: 2rem;
   border-radius: 6px;
-  box-shadow: 0 0 12px -2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 12px -2px rgba(0, 0, 0, .1);
 
   &__title {
     font-size: 1.4rem;
@@ -367,12 +403,6 @@ $gap: 1rem;
   &__container {
     display: flex;
     flex-flow: row wrap;
-    margin: -#{$gap} 0 2rem -#{$gap};
-    width: calc(100% + #{$gap});
-
-    > * {
-      margin: $gap 0 0 $gap;
-    }
 
     &:last-of-type {
       margin-bottom: 0;
@@ -381,12 +411,19 @@ $gap: 1rem;
 }
 
 .selection {
+  $gap: 1rem;
   $label-size: 1rem;
 
   display: flex;
   flex-direction: column;
 
+  .card__container {
+    @include gap-between-items($gap);
+  }
+
   &__50-50 {
+    margin-bottom: 2rem !important;
+
     > * {
       $width: calc(50% - #{$gap});
       flex: 1 0 $width;
@@ -410,17 +447,34 @@ $gap: 1rem;
   &__wrapper {
     .selection__title {
       font-size: $label-size;
-      margin: 0 0 0.25rem 0.5rem;
+      margin: 0 0 .25rem .5rem;
+    }
+
+    .p-error {
+      border-color: #f44336;
+    }
+
+    .p-inline-message {
+      width: 100%;
     }
 
     .dropdown {
       width: 100%;
     }
 
-    .listbox__item {
-      display: flex;
-      flex-direction: row;
-      justify-content: space-between;
+    .listbox {
+      &__item {
+        display: block;
+        white-space: nowrap;
+
+        &-badge {
+          margin-right: 0.5rem;
+        }
+
+        &-name {
+          vertical-align: middle;
+        }
+      }
     }
   }
 
@@ -435,8 +489,8 @@ $gap: 1rem;
       }
 
       label::after {
-        font-size: 0.75rem;
-        margin-left: 0.25rem;
+        font-size: .75rem;
+        margin-left: .25rem;
         color: var(--text-color-secondary);
         content: "(opcional)";
       }
@@ -453,36 +507,100 @@ $gap: 1rem;
     }
 
     &__templates {
-      $gap: 1rem;
+      @include gap-between-items(1rem, button);
 
-      transition: all 0.5s;
       opacity: 0;
       overflow: hidden;
       height: 0;
-      display: inline-flex;
+      display: flex;
       flex-wrap: wrap;
+      padding: .5rem .25rem;
+      transition: opacity .5s, height .5s;
 
       &--visible {
         opacity: 1;
-        height: auto;
-        padding: 0.25rem;
-        margin: 0 0 0 -#{$gap};
-        width: calc(100% + #{$gap});
-      }
-
-      button {
-        margin: $gap 0 0 $gap
+        height: 100%;
       }
     }
   }
 }
 
 .area {
+  .card__container {
+    @include gap-between-items(1.25rem, button);
+  }
+
   &__button {
+    display: flex;
     flex-grow: 1;
     text-align: center;
+    align-items: center;
+    justify-content: center;
     font-size: 1.15rem;
-    box-shadow: 0 0 8px 2px rgba(0, 0, 0, 0.3);
+    transition: all .2s ease;
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, .1),
+      0 1px 3px rgba(0, 0, 0, .08);
+
+    @media (hover) {
+      &:focus,
+      &:hover {
+          box-shadow:
+          0 7px 14px rgba(0, 0, 0, .1),
+          0 3px 6px rgba(0, 0, 0, .08);
+
+        i {
+          transform: rotate(45deg) translateY(-3px);
+        }
+      }
+    }
+
+    i {
+      transition: transform .3s ease;
+      margin-left: .25rem;
+      transform: rotate(45deg);
+    }
+
+    @keyframes sent {
+      15% {
+        transform: rotate(45deg) translateY(-1rem);
+        opacity: 0;
+      }
+      75% {
+        transform: rotate(45deg) translateY(-3px);
+        opacity: 0;
+      }
+      100% {
+        transform: rotate(45deg) translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes send-error {
+      50% {
+        transform: rotate(45deg) translate(50%, 50%);
+        opacity: 0;
+      }
+      75% {
+        transform: rotate(45deg) translate(0);
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    &--sent {
+      i {
+        animation: sent 4s;
+      }
+    }
+
+    &--error {
+      i {
+        animation: send-error 4s;
+      }
+    }
   }
 }
 </style>

@@ -1,12 +1,12 @@
 <template>
   <div class="control">
-    <Button class="control__zoom p-button-rounded p-button-secondary p-button-text"
+    <Button class="control__zoom control__zoom--out p-button-rounded p-button-secondary p-button-text"
       @click="zoom(-2)"
     >
       <i class="pi pi-search-minus"></i>
     </Button>
     <span class="control__separator">|</span>
-    <Button class="control__zoom p-button-rounded p-button-secondary p-button-text"
+    <Button class="control__zoom control__zoom--in p-button-rounded p-button-secondary p-button-text"
       @click="zoom(2)"
     >
       <i class="pi pi-search-plus"></i>
@@ -53,6 +53,17 @@ export default class Zoom extends Vue {
   &__zoom {
     padding: 0.5rem;
     color: var(--text-color) !important;
+    transition: all .4s ease;
+
+    &--out:focus,
+    &--out:hover {
+      transform: scale(.85);
+    }
+
+    &--in:focus,
+    &--in:hover {
+      transform: scale(1.15);
+    }
 
     i {
       font-size: 1.25rem !important;

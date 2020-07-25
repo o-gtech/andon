@@ -47,13 +47,13 @@ code {
 
 .toast {
   width: auto !important;
-  margin: 0 auto;
-  bottom: 1rem;
-  left: 1rem;
+  margin: 0 auto !important;
+  bottom: 1rem !important;
+  left: 1rem !important;
   right: 1rem;
   max-width: 800px;
 
-  .p-toast-image {
+  .p-toast-message-icon {
     font-size: 1.5rem !important;
   }
 }

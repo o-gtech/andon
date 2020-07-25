@@ -12,6 +12,7 @@ import ToastService from 'primevue/toastservice'
 import Dropdown from 'primevue/dropdown'
 import Card from 'primevue/card'
 import Listbox from 'primevue/listbox'
+import InlineMessage from 'primevue/inlinemessage'
 
 import 'primevue/resources/themes/saga-blue/theme.css'
 import 'primevue/resources/primevue.min.css'
@@ -26,6 +27,7 @@ Vue.component('Toast', Toast)
 Vue.component('Dropdown', Dropdown)
 Vue.component('Card', Card)
 Vue.component('Listbox', Listbox)
+Vue.component('InlineMessage', InlineMessage)
 
 Vue.config.productionTip = false
 
