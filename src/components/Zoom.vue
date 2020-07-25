@@ -1,14 +1,16 @@
 <template>
   <div class="control">
-    <Button class="control__zoom p-button-rounded p-button-secondary p-button-text p-button-lg"
-      icon="pi pi-search-minus"
+    <Button class="control__zoom p-button-rounded p-button-secondary p-button-text"
       @click="zoom(-2)"
-    />
+    >
+      <i class="pi pi-search-minus"></i>
+    </Button>
     <span class="control__separator">|</span>
-    <Button class="control__zoom p-button-rounded p-button-secondary p-button-text p-button-lg"
-      icon="pi pi-search-plus"
+    <Button class="control__zoom p-button-rounded p-button-secondary p-button-text"
       @click="zoom(2)"
-    />
+    >
+      <i class="pi pi-search-plus"></i>
+    </Button>
   </div>
 </template>
 
@@ -49,7 +51,12 @@ export default class Zoom extends Vue {
   align-items: center;
 
   &__zoom {
+    padding: 0.5rem;
     color: var(--text-color) !important;
+
+    i {
+      font-size: 1.25rem !important;
+    }
   }
 
   &__separator {

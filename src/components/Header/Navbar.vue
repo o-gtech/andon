@@ -1,7 +1,7 @@
 <template>
   <nav class="navbar">
     <div class="navbar__logo">
-      <i class="pi pi-circle-on" style="fontSize: 1.5rem"></i>
+      <span class="logo"></span>
     </div>
     <div class="navbar__title">
       Andon
@@ -28,11 +28,21 @@ export default class Navbar extends Vue {}
     display: flex;
     align-items: center;
     margin-right: auto;
+
+    .logo {
+      $width: 1.5rem;
+      $padding: $width / 2;
+
+      padding: $padding;
+      border-radius: $padding * 2;
+      background-color: var(--text-color);
+    }
   }
 
   &__title {
     position: absolute;
-    font-size: 1.3rem;
+    font-size: 1.5rem;
+    font-weight: 500;
   }
 }
 </style>
