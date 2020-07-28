@@ -19,28 +19,10 @@ import { Vue, Component } from 'vue-property-decorator'
 
 @Component
 export default class Zoom extends Vue {
-  private fontSize = 18
-
-  mounted () {
-    const savedFontSize = localStorage.getItem('fontSize')
-
-    if (savedFontSize) {
-      this.fontSize = parseInt(savedFontSize)
-    } else {
-      localStorage.setItem('fontSize', this.fontSize.toString())
-    }
-
-    this._setFontSize(this.fontSize)
-  }
-
-  private _setFontSize (fontSize: number) {
-    document.documentElement.style.fontSize = fontSize + 'px'
-  }
-
   private _zoom (amount: number) {
-    this.fontSize += amount
-    document.documentElement.style.fontSize = this.fontSize + 'px'
-    localStorage.setItem('fontSize', this.fontSize.toString())
+    Vue.prototype.$fontSize += amount
+    document.documentElement.style.fontSize = Vue.prototype.$fontSize + 'px'
+    localStorage.setItem('fontSize', Vue.prototype.$fontSize.toString())
   }
 
   public zoomHandler (event: any, zoomAmount: number) {
