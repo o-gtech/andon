@@ -91,7 +91,6 @@
           v-for="(value, key, index) in areas"
           :key="index"
           :label="value"
-          :ref="key"
           @click="areaButtonClickHandler($event, key)"
         >
           {{ value }}
@@ -343,13 +342,19 @@ export default class Home extends Vue {
   }
 
   public areaButtonClickHandler (event: any, area: string) {
+    let button = event.target
+    // When the icon inside the button is clicked target the button
+    if (button.tagName !== 'BUTTON') {
+      button = event.path[1]
+    }
+
     if (!this._validateForm()) {
-      this._animateSendButton(event.target, false)
+      this._animateSendButton(button, false)
       return
     }
 
     const sentText = this._sendText(area)
-    this._animateSendButton(event.target, sentText)
+    this._animateSendButton(button, sentText)
   }
 }
 </script>
@@ -542,16 +547,23 @@ export default class Home extends Vue {
       0 4px 6px rgba(0, 0, 0, .1),
       0 1px 3px rgba(0, 0, 0, .08);
 
+    @mixin icon-transformation() {
+      i {
+        transform: rotate(45deg) translateY(-3px);
+      }
+    }
+
+    &:focus {
+      @include icon-transformation;
+    }
+
     @media (hover) {
-      &:focus,
       &:hover {
-          box-shadow:
+        @include icon-transformation;
+
+        box-shadow:
           0 7px 14px rgba(0, 0, 0, .1),
           0 3px 6px rgba(0, 0, 0, .08);
-
-        i {
-          transform: rotate(45deg) translateY(-3px);
-        }
       }
     }
 

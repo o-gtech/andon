@@ -1,13 +1,13 @@
 <template>
   <div class="control">
     <Button class="control__zoom control__zoom--out p-button-rounded p-button-secondary p-button-text"
-      @click="zoom(-2)"
+      @click="zoomHandler($event, -2)"
     >
       <i class="pi pi-search-minus"></i>
     </Button>
     <span class="control__separator">|</span>
     <Button class="control__zoom control__zoom--in p-button-rounded p-button-secondary p-button-text"
-      @click="zoom(2)"
+      @click="zoomHandler($event, 2)"
     >
       <i class="pi pi-search-plus"></i>
     </Button>
@@ -37,10 +37,21 @@ export default class Zoom extends Vue {
     document.documentElement.style.fontSize = fontSize + 'px'
   }
 
-  public zoom (amount: number) {
+  private _zoom (amount: number) {
     this.fontSize += amount
     document.documentElement.style.fontSize = this.fontSize + 'px'
     localStorage.setItem('fontSize', this.fontSize.toString())
+  }
+
+  public zoomHandler (event: any, zoomAmount: number) {
+    // If the icon is clicked, target the button to blur
+    if (event.target.tagName === 'BUTTON') {
+      event.target.blur()
+    } else {
+      event.path[1].blur()
+    }
+
+    this._zoom(zoomAmount)
   }
 }
 </script>
@@ -55,14 +66,22 @@ export default class Zoom extends Vue {
     color: var(--text-color) !important;
     transition: all .4s ease;
 
-    &--out:focus,
-    &--out:hover {
+    &--out:focus {
       transform: scale(.85);
     }
 
-    &--in:focus,
-    &--in:hover {
+    &--in:focus {
       transform: scale(1.15);
+    }
+
+    @media (hover) {
+      &--out:hover {
+        transform: scale(.85);
+      }
+
+      &--in:hover {
+        transform: scale(1.15);
+      }
     }
 
     i {
