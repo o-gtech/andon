@@ -10,7 +10,7 @@
         <div class="selection__wrapper">
           <div class="selection__title">Planta</div>
           <Dropdown class="dropdown"
-            :class="{ 'p-error' : formErrors.plant }"
+            :class="{ 'p-error' : showErrors && formErrors.plant }"
             v-model="selectedPlant"
             :options="plants"
             optionLabel="name"
@@ -18,12 +18,12 @@
             :filter="plants.length > 6"
             filterPlaceholder="Busca la planta"
           />
-          <InlineMessage severity="error" v-show="formErrors.plant">Selecciona una planta</InlineMessage>
+          <InlineMessage severity="error" v-show="showErrors && formErrors.plant">Selecciona una planta</InlineMessage>
         </div>
         <div class="selection__wrapper">
           <div class="selection__title">Máquina</div>
           <Dropdown class="dropdown"
-            :class="{ 'p-error' : formErrors.machine }"
+            :class="{ 'p-error' : showErrors && formErrors.machine}"
             v-model="selectedMachine"
             :options="machines"
             optionLabel="name"
@@ -32,7 +32,7 @@
             filterPlaceholder="Busca la máquina"
             :disabled="!showMachines"
           />
-          <InlineMessage severity="error" v-show="formErrors.machine">Selecciona una máquina</InlineMessage>
+          <InlineMessage severity="error" v-show="showErrors && formErrors.machine">Selecciona una máquina</InlineMessage>
         </div>
       </div>
 
@@ -40,7 +40,7 @@
         <div class="selection__wrapper">
           <div class="selection__title">Categoría</div>
           <Listbox class="listbox"
-            :class="{ 'p-error' : formErrors.category }"
+            :class="{ 'p-error' : showErrors && formErrors.category }"
             v-model="selectedCategory"
             :options="categories"
             optionLabel="name"
@@ -59,7 +59,7 @@
               </div>
             </template>
           </Listbox>
-          <InlineMessage severity="error" v-show="formErrors.category">Selecciona una categoría</InlineMessage>
+          <InlineMessage severity="error" v-show="showErrors && formErrors.category">Selecciona una categoría</InlineMessage>
         </div>
         <div class="comment">
           <span class="comment__wrapper p-float-label">
@@ -92,6 +92,7 @@
           :key="index"
           :label="value"
           @click="areaButtonClickHandler($event, key)"
+          :disabled="disableSendButtons"
         >
           {{ value }}
           <i class="pi pi-arrow-up"></i>
@@ -125,19 +126,39 @@ const emptyCategoryRecord: CategoryRecord = {
   severity: 0
 }
 
+interface Report {
+  plant: string;
+  machine: string;
+  category: string;
+  area: string;
+  comment: string;
+}
+
+const emptyReport: Report = {
+  plant: '',
+  machine: '',
+  category: '',
+  area: '',
+  comment: ''
+}
+
 @Component({
   components: {
     Zoom
   }
 })
 export default class Home extends Vue {
+  // Plants
   private selectedPlant = emptyRecord
-  private selectedMachine = emptyRecord
-  private selectedCategory = emptyCategoryRecord
-  private showMachines = false
   private plants: Record[] = []
+  // Machines
+  private selectedMachine = emptyRecord
   private machines: Record[] = []
+  private showMachines = false
+  // Category
+  private selectedCategory = emptyCategoryRecord
   private categories: CategoryRecord[] = []
+  // Comment
   private comment = ''
   private showCommentTemplates = false
   private commentTemplates = [
@@ -178,10 +199,14 @@ export default class Home extends Vue {
     quality: 'Calidad'
   }
 
+  private lastSentReport: Report = emptyReport
+  private disableSendButtons = true
+  private showErrors = false
+
   private formErrors = {
-    plant: false,
-    machine: false,
-    category: false
+    plant: true,
+    machine: true,
+    category: true
   }
 
   get plant (): string {
@@ -196,6 +221,18 @@ export default class Home extends Vue {
     return this.selectedCategory.name
   }
 
+  get hasErrors (): boolean {
+    const errors = Object.values(this.formErrors)
+
+    for (const error of errors) {
+      if (error) {
+        return true
+      }
+    }
+
+    return false
+  }
+
   mounted () {
     this.plants = this.getPlants()
     this.categories = this.getCategories()
@@ -203,25 +240,42 @@ export default class Home extends Vue {
 
   @Watch('selectedPlant')
   public fetchMachines () {
-    this.showMachines = false // Wait until we receive data from server
-    // TODO: Get the plant's machines from server
-    this.machines = this.getMachines(this.plant)
-    this.showMachines = true
-    this.formErrors.plant = false
+    if (this.plant) {
+      this.showMachines = false // Wait until we receive data from server
+      // TODO: Get the plant's machines from server
+      this.machines = this.getMachines(this.plant)
+      this.showMachines = true
+      this.formErrors.plant = false
+      this._sendButtonsCheck()
+    }
   }
 
   @Watch('selectedMachine')
   public machineSelected () {
-    this.formErrors.machine = false
+    if (this.machine) {
+      this.formErrors.machine = false
+      this._sendButtonsCheck()
+    }
   }
 
   @Watch('selectedCategory')
   public activateCommentTemplates () {
-    if (!this.comment) {
-      this.focusCommentInput()
-      this.showCommentTemplates = true
+    if (this.category) {
+      if (!this.comment) {
+        this.focusCommentInput()
+        this.showCommentTemplates = true
+      }
+      this.formErrors.category = false
+      this._sendButtonsCheck()
     }
-    this.formErrors.category = false
+  }
+
+  private _sendButtonsCheck () {
+    if (this.hasErrors) {
+      this.disableSendButtons = true
+    } else {
+      this.disableSendButtons = false
+    }
   }
 
   public focusCommentInput () {
@@ -286,22 +340,14 @@ export default class Home extends Vue {
     this.showCommentTemplates = false
   }
 
-  private _validateForm (): boolean {
+  private _validateForm () {
     this.formErrors = {
       plant: this.plant === '',
       machine: this.machine === '',
       category: this.category === ''
     }
 
-    const errors = Object.values(this.formErrors)
-
-    for (const error of errors) {
-      if (error) {
-        return false
-      }
-    }
-
-    return true
+    this.showErrors = this.hasErrors
   }
 
   private _animateSendButton (button: HTMLElement, sent: boolean) {
@@ -317,28 +363,29 @@ export default class Home extends Vue {
   }
 
   private _sendText (area: string): boolean {
-    const data = {
-      plant: this.plant,
-      machine: this.machine,
-      area: area,
-      comment: this.comment,
-      phone: this.phone
-    }
-    let sentText = false
+    const message = `Máquina ${this.machine} de la planta ${this.plant} [${this.category}]\n` +
+                    `Area ${area} notificada` + this.comment ? ` por ${this.comment}` : ''
+    let messageSent = false
 
-    MessageService.send(data)
+    // TODO: Send the area as argument to be able to identify to whom we are sending the message
+    MessageService.send(message)
       .then((response: any) => {
         this.$toast.add({ severity: 'success', summary: 'Mensaje mandado!', detail: response.data, life: 3000 })
-        // TODO: Block send multiple times a message
-        sentText = true
+        messageSent = true
       })
       .catch((error: any) => {
         const errorMessage = error.response ? error.response.data : 'No se pudo conectar con el servidor.'
         this.$toast.add({ severity: 'error', summary: errorMessage, detail: 'Porfavor intentelo de nuevo', life: 3000 })
-        sentText = false
+        messageSent = false
       })
 
-    return sentText
+    return messageSent
+  }
+
+  private _clearInputs () {
+    this.selectedPlant = emptyRecord
+    this.selectedMachine = emptyRecord
+    this.selectedCategory = emptyCategoryRecord
   }
 
   public areaButtonClickHandler (event: any, area: string) {
@@ -348,13 +395,35 @@ export default class Home extends Vue {
       button = event.path[1]
     }
 
-    if (!this._validateForm()) {
+    this._validateForm()
+
+    if (this.hasErrors) {
       this._animateSendButton(button, false)
+      this.disableSendButtons = true
       return
     }
 
-    const sentText = this._sendText(area)
-    this._animateSendButton(button, sentText)
+    const reportSent = this._sendText(area)
+    this._animateSendButton(button, reportSent)
+
+    if (reportSent) {
+      this.lastSentReport = {
+        plant: this.plant,
+        machine: this.machine,
+        category: this.category,
+        area: area,
+        comment: this.comment
+      }
+
+      this.showErrors = false
+      this._clearInputs()
+    }
+
+    // Disable send buttons for the duration of the button's animation
+    this.disableSendButtons = true
+    setTimeout(() => {
+      this.disableSendButtons = false
+    }, 4000)
   }
 }
 </script>
