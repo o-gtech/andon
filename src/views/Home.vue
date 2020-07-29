@@ -2,7 +2,12 @@
   <div class="home">
     <div class="home__header">
       <h1 class="home__title">Nuevo Reporte</h1>
-      <Zoom />
+      <ActionsMenu
+        :disableRestore="!lastSentReport.area"
+        v-on:restore="restoreReport()"
+        :disableClear="!plant && !machine && !category && !comment"
+        v-on:clear="clearReport()"
+      />
     </div>
     <div class="selection card">
       <div class="card__title">Datos del reporte</div>
@@ -103,10 +108,10 @@
 </template>
 
 <script lang="ts">
-import { Component, Watch, Vue } from 'vue-property-decorator'
+import { Component, Watch, Vue, Ref } from 'vue-property-decorator'
 import MessageService from '../services/MessageService'
 
-import Zoom from '../components/Zoom.vue'
+import ActionsMenu from '../components/ActionsMenu.vue'
 
 interface Record {
   readonly name: string;
@@ -127,24 +132,24 @@ const emptyCategoryRecord: CategoryRecord = {
 }
 
 interface Report {
-  plant: string;
-  machine: string;
-  category: string;
+  plant: Record;
+  machine: Record;
+  category: CategoryRecord;
   area: string;
   comment: string;
 }
 
 const emptyReport: Report = {
-  plant: '',
-  machine: '',
-  category: '',
+  plant: emptyRecord,
+  machine: emptyRecord,
+  category: emptyCategoryRecord,
   area: '',
   comment: ''
 }
 
 @Component({
   components: {
-    Zoom
+    ActionsMenu
   }
 })
 export default class Home extends Vue {
@@ -208,6 +213,8 @@ export default class Home extends Vue {
     machine: true,
     category: true
   }
+
+  @Ref('comment') readonly commentTextArea!: Vue
 
   get plant (): string {
     return this.selectedPlant.name
@@ -279,7 +286,8 @@ export default class Home extends Vue {
   }
 
   public focusCommentInput () {
-    ((this.$refs.comment as Vue).$el as HTMLElement).focus() // https://forum.vuejs.org/t/vetur-bug-or-code-error-property-el-does-not-exist-on-type-svgelement/73696
+    const commentTextArea = this.commentTextArea.$el as HTMLTextAreaElement
+    commentTextArea.focus()
   }
 
   public getPlants (): Record[] {
@@ -340,6 +348,19 @@ export default class Home extends Vue {
     this.showCommentTemplates = false
   }
 
+  public restoreReport () {
+    if (this.lastSentReport !== emptyReport) {
+      this.selectedPlant = this.lastSentReport.plant
+      this.selectedMachine = this.lastSentReport.machine
+      this.selectedCategory = this.lastSentReport.category
+      this.comment = this.lastSentReport.comment
+    }
+  }
+
+  public clearReport () {
+    this._clearInputs()
+  }
+
   private _validateForm () {
     this.formErrors = {
       plant: this.plant === '',
@@ -386,6 +407,7 @@ export default class Home extends Vue {
     this.selectedPlant = emptyRecord
     this.selectedMachine = emptyRecord
     this.selectedCategory = emptyCategoryRecord
+    this.comment = ''
   }
 
   public areaButtonClickHandler (event: any, area: string) {
@@ -408,22 +430,23 @@ export default class Home extends Vue {
 
     if (reportSent) {
       this.lastSentReport = {
-        plant: this.plant,
-        machine: this.machine,
-        category: this.category,
+        plant: this.selectedPlant,
+        machine: this.selectedMachine,
+        category: this.selectedCategory,
         area: area,
         comment: this.comment
       }
 
       this.showErrors = false
       this._clearInputs()
+      this.disableSendButtons = true
+    } else {
+      // Disable send buttons for the duration of the button's animation
+      this.disableSendButtons = true
+      setTimeout(() => {
+        this.disableSendButtons = false
+      }, 4000)
     }
-
-    // Disable send buttons for the duration of the button's animation
-    this.disableSendButtons = true
-    setTimeout(() => {
-      this.disableSendButtons = false
-    }, 4000)
   }
 }
 </script>

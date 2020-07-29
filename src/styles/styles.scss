@@ -45,6 +45,15 @@ code {
   border-radius: 6px;
 }
 
+// Remove capture click of all icons inside a button
+button i.pi {
+  pointer-events: none;
+}
+
+//
+// Theme overrides
+//
+
 .toast {
   width: auto !important;
   margin: 0 auto !important;
@@ -55,5 +64,21 @@ code {
 
   .p-toast-message-icon {
     font-size: 1.5rem !important;
+  }
+}
+
+.p-overlaypanel-close,
+.p-overlaypanel-close:enabled {
+  color: #6c757d !important;
+  border: 0 none !important;
+  background: transparent !important;
+  transition: background-color 0.2s, color 0.2s, box-shadow 0.2s !important;
+  top: 0.25rem !important;
+  right: 0.75rem !important;
+
+  &:hover {
+    color: #495057 !important;
+    border-color: transparent !important;
+    background: #e9ecef !important;
   }
 }

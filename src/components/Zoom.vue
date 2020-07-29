@@ -67,7 +67,7 @@ export default class Zoom extends Vue {
     }
 
     i {
-      font-size: 1.25rem !important;
+      font-size: 1.25rem;
     }
   }
 
