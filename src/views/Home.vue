@@ -358,6 +358,7 @@ export default class Home extends Vue {
   }
 
   public clearReport () {
+    this.disableSendButtons = true
     this._clearInputs()
   }
 
