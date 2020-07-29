@@ -225,7 +225,7 @@ export default class Home extends Vue {
   }
 
   get category (): string {
-    return this.selectedCategory.name
+    return this.selectedCategory ? this.selectedCategory.name : ''
   }
 
   get hasErrors (): boolean {
@@ -358,6 +358,7 @@ export default class Home extends Vue {
   }
 
   public clearReport () {
+    this.disableSendButtons = true
     this._clearInputs()
   }
 
