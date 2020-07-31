@@ -269,7 +269,6 @@ export default class Home extends Vue {
   public activateCommentTemplates () {
     if (this.category) {
       if (!this.comment) {
-        this.focusCommentInput()
         this.showCommentTemplates = true
       }
       this.formErrors.category = false
