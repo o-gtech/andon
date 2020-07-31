@@ -25,10 +25,11 @@ export default class App extends Vue {
   }
 
   mounted () {
-    this._setupZoom()
+    this._initializeZoom()
+    this._initializeDarkModeListener()
   }
 
-  private _setupZoom () {
+  private _initializeZoom () {
     const savedFontSize = localStorage.getItem('fontSize')
 
     if (savedFontSize) {
@@ -38,6 +39,14 @@ export default class App extends Vue {
     }
 
     document.documentElement.style.fontSize = Vue.prototype.$fontSize + 'px'
+  }
+
+  public _initializeDarkModeListener () {
+    const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    darkModeMediaQuery.addListener((e) => {
+      Vue.prototype.$darkModeOn = e.matches
+      console.log(`Dark mode is ${Vue.prototype.$darkModeOn ? '🌒 on' : '☀️ off'}.`)
+    })
   }
 }
 </script>
