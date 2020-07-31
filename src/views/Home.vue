@@ -225,7 +225,7 @@ export default class Home extends Vue {
   }
 
   get category (): string {
-    return this.selectedCategory ? this.selectedCategory.name : ''
+    return this.selectedCategory.name
   }
 
   get hasErrors (): boolean {
@@ -247,33 +247,45 @@ export default class Home extends Vue {
 
   @Watch('selectedPlant')
   public fetchMachines () {
-    if (this.plant) {
+    if (this.selectedPlant && this.plant) {
       this.showMachines = false // Wait until we receive data from server
       // TODO: Get the plant's machines from server
       this.machines = this.getMachines(this.plant)
       this.showMachines = true
       this.formErrors.plant = false
-      this._sendButtonsCheck()
+    } else {
+      this.selectedPlant = emptyRecord
+      this.formErrors.plant = true
     }
+
+    this._sendButtonsCheck()
   }
 
   @Watch('selectedMachine')
   public machineSelected () {
-    if (this.machine) {
+    if (this.selectedMachine && this.machine) {
       this.formErrors.machine = false
-      this._sendButtonsCheck()
+    } else {
+      this.selectedMachine = emptyRecord
+      this.formErrors.machine = true
     }
+
+    this._sendButtonsCheck()
   }
 
   @Watch('selectedCategory')
   public activateCommentTemplates () {
-    if (this.category) {
+    if (this.selectedCategory && this.category) {
       if (!this.comment) {
         this.showCommentTemplates = true
       }
       this.formErrors.category = false
-      this._sendButtonsCheck()
+    } else {
+      this.selectedCategory = emptyCategoryRecord
+      this.formErrors.category = true
     }
+
+    this._sendButtonsCheck()
   }
 
   private _sendButtonsCheck () {
