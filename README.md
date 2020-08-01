@@ -1,24 +1,34 @@
 # andon
 
 ## Project setup
+### Set node version
+#### Using nvm
+Before installing dependencies set the default node version using `nvm`:
 ```
-yarn
+nvm use
 ```
+#### Others
+You can also install it by
+1. Checking the default version in the [`.nvmrc` file](https://github.com/o-gtech/andon/blob/master/.nvmrc) in the root directory
+2. Installing it using your preferred method ([node official site](https://nodejs.org), `brew`, etc)
 
-### Compiles and hot-reloads for development
+### Install dependencies:
+```
+yarn install
+```
+Eventhough `npm` could also be used, `yarn` is preferred over `npm`.
+
+### Run it locally
 ```
 yarn serve
 ```
 
-### Compiles and minifies for production
+### Build for production (compiles & minifies)
 ```
 yarn build
 ```
 
-### Lints and fixes files
+### Lint and fix files
 ```
 yarn lint
 ```
-
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
