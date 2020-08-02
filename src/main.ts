@@ -3,6 +3,7 @@ import App from './App.vue'
 import './registerServiceWorker'
 import router from './router'
 import store from './store'
+import apolloProvider from './apollo'
 
 import Textarea from 'primevue/textarea'
 import InputText from 'primevue/inputtext'
@@ -38,5 +39,6 @@ Vue.config.productionTip = false
 new Vue({
   router,
   store,
+  apolloProvider,
   render: h => h(App)
 }).$mount('#app')
