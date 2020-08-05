@@ -3,12 +3,13 @@
     <div class="home__header">
       <h1 class="home__title">Nuevo Reporte</h1>
       <ActionsMenu
-        :disableRestore="!lastSentReport.area"
+        :disableRestore="!lastSentReport"
         v-on:restore="restoreReport()"
-        :disableClear="!plant && !machine && !category && !comment"
+        :disableClear="!selectedPlant && !selectedMachine && !selectedCategory && !comment"
         v-on:clear="clearReport()"
       />
     </div>
+    <div v-if="$apollo.queries.plants.loading">Loading...</div>
     <div class="selection card">
       <div class="card__title">Datos del reporte</div>
       <div class="card__container selection__50-50">
@@ -20,8 +21,9 @@
             :options="plants"
             optionLabel="name"
             placeholder="Selecciona la planta"
-            :filter="plants.length > 6"
+            :filter="plants && plants.length > 6"
             filterPlaceholder="Busca la planta"
+            :disabled="!plants"
           />
           <InlineMessage severity="error" v-show="showErrors && formErrors.plant">Selecciona una planta</InlineMessage>
         </div>
@@ -33,9 +35,9 @@
             :options="machines"
             optionLabel="name"
             placeholder="Selecciona la máquina"
-            :filter="machines.length > 6"
+            :filter="machines && machines.length > 6"
             filterPlaceholder="Busca la máquina"
-            :disabled="!showMachines"
+            :disabled="!machines"
           />
           <InlineMessage severity="error" v-show="showErrors && formErrors.machine">Selecciona una máquina</InlineMessage>
         </div>
@@ -50,8 +52,9 @@
             :options="categories"
             optionLabel="name"
             listStyle="max-height: 8rem"
-            :filter="categories.length > 6"
+            :filter="categories && categories.length > 6"
             filterPlaceholder="Busca la categoría"
+            :disabled="!categories"
           >
             <template #option="slotProps">
               <div class="listbox__item">
@@ -89,17 +92,17 @@
       </div>
     </div>
 
-    <div class="area card">
+    <!-- TODO: Hide area with opacity to animate it -->
+    <div class="area card" v-show="!!areas">
       <div class="card__title">Mandar a area</div>
       <div class="card__container">
         <Button class="area__button"
-          v-for="(value, key, index) in areas"
-          :key="index"
-          :label="value"
-          @click="areaButtonClickHandler($event, key)"
+          v-for="area in areas"
+          :key="area.id"
+          @click="areaButtonClickHandler($event, area)"
           :disabled="disableSendButtons"
         >
-          {{ value }}
+          {{ area.name }}
           <i class="pi pi-arrow-up"></i>
         </Button>
       </div>
@@ -108,64 +111,54 @@
 </template>
 
 <script lang="ts">
-import { Component, Watch, Vue, Ref } from 'vue-property-decorator'
+import { Vue, Component, Watch, Ref } from 'vue-property-decorator'
+import gql from 'graphql-tag'
 
-import PlantService from '../services/PlantService'
-import MachineService from '../services/MachineService'
+import { Plant, Machine, Area, Category, Report } from '../typings'
 import MessageService from '../services/MessageService'
 
 import ActionsMenu from '../components/ActionsMenu.vue'
 
-interface Record {
-  readonly name: string;
-}
-
-const emptyRecord: Record = {
-  name: ''
-}
-
-interface CategoryRecord {
-  readonly name: string;
-  readonly severity: number;
-}
-
-const emptyCategoryRecord: CategoryRecord = {
-  name: '',
-  severity: 0
-}
-
-interface Report {
-  plant: Record;
-  machine: Record;
-  category: CategoryRecord;
-  area: string;
-  comment: string;
-}
-
-const emptyReport: Report = {
-  plant: emptyRecord,
-  machine: emptyRecord,
-  category: emptyCategoryRecord,
-  area: '',
-  comment: ''
-}
+const gqlGetPlants = gql`query getPlants {
+  getPlants {
+    id
+    name
+    areas {
+      id
+      name
+      phones
+    }
+    machines {
+      id
+      name
+      areas
+    }
+  }
+}`
 
 @Component({
   components: {
     ActionsMenu
+  },
+  apollo: {
+    plants: {
+      query: gqlGetPlants,
+      update: data => data.getPlants
+    }
   }
 })
 export default class Home extends Vue {
   // Plants
-  private selectedPlant = emptyRecord
-  private plants: Record[] = []
+  private selectedPlant: Plant = null as any
+  private plants: Plant[] = null as any
   // Machines
-  private selectedMachine = emptyRecord
-  private machines: Record[] = []
-  private showMachines = false
+  private selectedMachine: Machine = null as any
+  private machines: Machine[] = null as any
   // Category
-  private selectedCategory = emptyCategoryRecord
-  private categories: CategoryRecord[] = []
+  private selectedCategory: Category = null as any
+  private categories: Category[] = null as any
+  // Area
+  private areas: Area[] = null as any
   // Comment
   private comment = ''
   private showCommentTemplates = false
@@ -198,16 +191,7 @@ export default class Home extends Vue {
     // { comment: 'Capacitacion', edit: false } // RH
   ]
 
-  private phone = '+5218181757838'
-  private areas = {
-    hse: 'HSE',
-    operations: 'Operaciones',
-    tooling: 'Herramentales',
-    maintenance: 'Mantenimiento',
-    quality: 'Calidad'
-  }
-
-  private lastSentReport: Report = emptyReport
+  private lastSentReport: Report = null as any
   private disableSendButtons = true
   private showErrors = false
 
@@ -215,20 +199,6 @@ export default class Home extends Vue {
     plant: true,
     machine: true,
     category: true
-  }
-
-  @Ref('comment') readonly commentTextArea!: Vue
-
-  get plant (): string {
-    return this.selectedPlant.name
-  }
-
-  get machine (): string {
-    return this.selectedMachine.name
-  }
-
-  get category (): string {
-    return this.selectedCategory.name
   }
 
   get hasErrors (): boolean {
@@ -244,19 +214,19 @@ export default class Home extends Vue {
   }
 
   mounted () {
-    this.retrievePlants()
+    // TODO: Get categories from API
     this.categories = this.getCategories()
   }
 
+  @Ref('comment') readonly commentTextArea!: Vue
+
   @Watch('selectedPlant')
-  public fetchMachines () {
-    if (this.selectedPlant && this.plant) {
-      this.showMachines = false // Wait until we receive data from server
-      this.retrieveMachines(this.plant)
-      this.showMachines = true
+  public plantSelected () {
+    if (this.selectedPlant) {
+      this.machines = this.selectedPlant.machines
+      this.areas = this.selectedPlant.areas
       this.formErrors.plant = false
     } else {
-      this.selectedPlant = emptyRecord
       this.formErrors.plant = true
     }
 
@@ -265,10 +235,9 @@ export default class Home extends Vue {
 
   @Watch('selectedMachine')
   public machineSelected () {
-    if (this.selectedMachine && this.machine) {
+    if (this.selectedMachine) {
       this.formErrors.machine = false
     } else {
-      this.selectedMachine = emptyRecord
       this.formErrors.machine = true
     }
 
@@ -276,14 +245,13 @@ export default class Home extends Vue {
   }
 
   @Watch('selectedCategory')
-  public activateCommentTemplates () {
-    if (this.selectedCategory && this.category) {
+  public categorySelected () {
+    if (this.selectedCategory) {
       if (!this.comment) {
         this.showCommentTemplates = true
       }
       this.formErrors.category = false
     } else {
-      this.selectedCategory = emptyCategoryRecord
       this.formErrors.category = true
     }
 
@@ -303,20 +271,12 @@ export default class Home extends Vue {
     commentTextArea.focus()
   }
 
-  public retrievePlants (): void {
-    this.plants = PlantService.getAll()
-  }
-
-  public retrieveMachines (fromPlant: string): void {
-    this.machines = MachineService.getAll(fromPlant)
-  }
-
-  public getCategories (): CategoryRecord[] {
-    const categories = [
-      { name: 'Mantenimiento', severity: 5 },
-      { name: 'Fallo', severity: 9 },
-      { name: 'Ajustes', severity: 2 },
-      { name: 'Falta', severity: 5 }
+  public getCategories (): Category[] {
+    const categories: Category[] = [
+      { id: '0', name: 'Mantenimiento', severity: '5' },
+      { id: '1', name: 'Fallo', severity: '9' },
+      { id: '2', name: 'Ajustes', severity: '2' },
+      { id: '3', name: 'Falta', severity: '5' }
     ]
     return categories.sort((a, b): number => (
       a.severity < b.severity) ? 1 : (a.severity === b.severity) ? ((a.name > b.name) ? 1 : -1) : -1
@@ -344,7 +304,7 @@ export default class Home extends Vue {
   }
 
   public restoreReport () {
-    if (this.lastSentReport !== emptyReport) {
+    if (this.lastSentReport) {
       this.selectedPlant = this.lastSentReport.plant
       this.selectedMachine = this.lastSentReport.machine
       this.selectedCategory = this.lastSentReport.category
@@ -359,9 +319,9 @@ export default class Home extends Vue {
 
   private _validateForm () {
     this.formErrors = {
-      plant: this.plant === '',
-      machine: this.machine === '',
-      category: this.category === ''
+      plant: !this.selectedPlant,
+      machine: !this.selectedMachine,
+      category: !this.selectedCategory
     }
 
     this.showErrors = this.hasErrors
@@ -380,7 +340,7 @@ export default class Home extends Vue {
   }
 
   private _sendText (area: string): boolean {
-    const message = `Máquina ${this.machine} de la planta ${this.plant} [${this.category}]\n` +
+    const message = `Máquina ${this.selectedMachine.name} de la planta ${this.selectedPlant.name} [${this.selectedCategory.name}]\n` +
                     `Area ${area} notificada` + this.comment ? ` por ${this.comment}` : ''
     let messageSent = false
 
@@ -400,13 +360,16 @@ export default class Home extends Vue {
   }
 
   private _clearInputs () {
-    this.selectedPlant = emptyRecord
-    this.selectedMachine = emptyRecord
-    this.selectedCategory = emptyCategoryRecord
+    this.selectedPlant = null as any
+    this.selectedMachine = null as any
+    this.selectedCategory = null as any
     this.comment = ''
+
+    this.machines = null as any
+    this.areas = null as any
   }
 
-  public areaButtonClickHandler (event: any, area: string) {
+  public areaButtonClickHandler (event: any, area: Area) {
     let button = event.target
     // When the icon inside the button is clicked target the button
     if (button.tagName !== 'BUTTON') {
@@ -421,17 +384,22 @@ export default class Home extends Vue {
       return
     }
 
-    const reportSent = this._sendText(area)
+    const reportSent = this._sendText(area.name)
     this._animateSendButton(button, reportSent)
 
     if (reportSent) {
       this.lastSentReport = {
+        creation_date: new Date(),
+        assist_date: new Date(),
+        solved_date: new Date(),
         plant: this.selectedPlant,
         machine: this.selectedMachine,
         category: this.selectedCategory,
         area: area,
         comment: this.comment
       }
+
+      // TODO: Save report in DB
 
       this.showErrors = false
       this._clearInputs()

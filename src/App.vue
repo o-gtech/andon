@@ -10,8 +10,9 @@
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator'
+import { Vue, Component } from 'vue-property-decorator'
 import Header from './components/Header/Header.vue'
+import 'vue-apollo' // https://github.com/vuejs/vue-apollo/issues/473#issuecomment-509361897
 
 @Component({
   components: {
