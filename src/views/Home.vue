@@ -119,6 +119,8 @@ import MessageService from '../services/MessageService'
 
 import ActionsMenu from '../components/ActionsMenu.vue'
 
+const NULL = null as any
+
 const gqlGetPlants = gql`query getPlants {
   getPlants {
     id
@@ -149,16 +151,16 @@ const gqlGetPlants = gql`query getPlants {
 })
 export default class Home extends Vue {
   // Plants
-  private selectedPlant: Plant = null as any
-  private plants: Plant[] = null as any
+  private selectedPlant: Plant = NULL
+  private plants: Plant[] = NULL
   // Machines
-  private selectedMachine: Machine = null as any
-  private machines: Machine[] = null as any
+  private selectedMachine: Machine = NULL
+  private machines: Machine[] = NULL
   // Category
-  private selectedCategory: Category = null as any
-  private categories: Category[] = null as any
+  private selectedCategory: Category = NULL
+  private categories: Category[] = NULL
   // Area
-  private areas: Area[] = null as any
+  private areas: Area[] = NULL
   // Comment
   private comment = ''
   private showCommentTemplates = false
@@ -191,7 +193,7 @@ export default class Home extends Vue {
     // { comment: 'Capacitacion', edit: false } // RH
   ]
 
-  private lastSentReport: Report = null as any
+  private lastSentReport: Report = NULL
   private disableSendButtons = true
   private showErrors = false
 
@@ -225,12 +227,13 @@ export default class Home extends Vue {
     if (this.selectedPlant) {
       this.machines = this.selectedPlant.machines
       this.areas = this.selectedPlant.areas
+      this.selectedMachine = NULL
       this.formErrors.plant = false
     } else {
       this.formErrors.plant = true
     }
 
-    this._sendButtonsCheck()
+    this._checkSendButtons()
   }
 
   @Watch('selectedMachine')
@@ -241,7 +244,7 @@ export default class Home extends Vue {
       this.formErrors.machine = true
     }
 
-    this._sendButtonsCheck()
+    this._checkSendButtons()
   }
 
   @Watch('selectedCategory')
@@ -255,20 +258,15 @@ export default class Home extends Vue {
       this.formErrors.category = true
     }
 
-    this._sendButtonsCheck()
+    this._checkSendButtons()
   }
 
-  private _sendButtonsCheck () {
+  private _checkSendButtons () {
     if (this.hasErrors) {
       this.disableSendButtons = true
     } else {
       this.disableSendButtons = false
     }
-  }
-
-  public focusCommentInput () {
-    const commentTextArea = this.commentTextArea.$el as HTMLTextAreaElement
-    commentTextArea.focus()
   }
 
   public getCategories (): Category[] {
@@ -298,7 +296,8 @@ export default class Home extends Vue {
   public setComment (text: string, edit: boolean): void {
     this.comment = text
     if (edit) {
-      this.focusCommentInput()
+      const commentTextArea = this.commentTextArea.$el as HTMLTextAreaElement
+      commentTextArea.focus()
     }
     this.showCommentTemplates = false
   }
@@ -360,13 +359,13 @@ export default class Home extends Vue {
   }
 
   private _clearInputs () {
-    this.selectedPlant = null as any
-    this.selectedMachine = null as any
-    this.selectedCategory = null as any
+    this.selectedPlant = NULL
+    this.selectedMachine = NULL
+    this.selectedCategory = NULL
     this.comment = ''
 
-    this.machines = null as any
-    this.areas = null as any
+    this.machines = NULL
+    this.areas = NULL
   }
 
   public areaButtonClickHandler (event: any, area: Area) {
