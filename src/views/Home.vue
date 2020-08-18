@@ -113,15 +113,15 @@
 <script lang="ts">
 import { Vue, Component, Watch, Ref } from 'vue-property-decorator'
 import gql from 'graphql-tag'
+import { DateTime } from 'luxon'
 
 import { Plant, Machine, Area, Category, Report } from '../typings'
 import MessageService from '../services/MessageService'
-
 import ActionsMenu from '../components/ActionsMenu.vue'
 
 const NULL = null as any
 
-const gqlGetPlants = gql`query getPlants {
+const allPlantsQuery = gql`query getPlants {
   getPlants {
     id
     name
@@ -138,14 +138,39 @@ const gqlGetPlants = gql`query getPlants {
   }
 }`
 
+const createReportMutation = gql`mutation CreateReport(
+  $creationDate: DateTime!,
+  $assistDate: DateTime,
+  $solvedDate: DateTime,
+  $categoryID: String!,
+  $plantID: ID!,
+  $areaID: ID!,
+  $machineID: ID!,
+  $comment: String!
+) {
+  createReport(
+    creation_date: $creationDate,
+    assist_date: $assistDate,
+    solved_date: $solvedDate,
+    category: $categoryID,
+    plant: $plantID,
+    area: $areaID,
+    machine: $machineID,
+    comment: $comment
+  ) {
+    id
+  }
+}`
+
 @Component({
   components: {
     ActionsMenu
   },
   apollo: {
     plants: {
-      query: gqlGetPlants,
+      query: allPlantsQuery,
       update: data => data.getPlants
+      // pollInterval: 300 ???
     }
   }
 })
@@ -368,7 +393,52 @@ export default class Home extends Vue {
     this.areas = NULL
   }
 
-  public areaButtonClickHandler (event: any, area: Area) {
+  private _saveReport (): Promise<boolean> {
+    return new Promise(resolve => {
+      this.$apollo.mutate({
+        mutation: createReportMutation,
+        variables: {
+          creationDate: this.lastSentReport.creation_date,
+          assistDate: this.lastSentReport.assist_date,
+          solvedDate: this.lastSentReport.solved_date,
+          plantID: this.lastSentReport.plant.id,
+          machineID: this.lastSentReport.machine.id,
+          categoryID: this.lastSentReport.category.id,
+          areaID: this.lastSentReport.area.id,
+          comment: this.lastSentReport.comment
+        },
+        // update: (store: any, { data: { createReport } }: any) => {
+        //   const data = store.readQuery({ query: allReportsQuery })
+        //   data.allReports.push(createReport)
+        //   store.writeQuery({ query: allReportsQuery, data })
+        // },
+        optimisticResponse: {
+          __typename: 'Mutation',
+          createReport: {
+            __typename: 'Report',
+            id: -1,
+            creation_date: this.lastSentReport.creation_date,
+            assist_date: this.lastSentReport.assist_date,
+            solved_date: this.lastSentReport.solved_date,
+            plant: this.lastSentReport.plant.id,
+            machine: this.lastSentReport.machine.id,
+            category: this.lastSentReport.category.id,
+            area: this.lastSentReport.area.id,
+            comment: this.lastSentReport.comment
+          }
+        }
+      }).then(({ data }: any) => {
+        this.lastSentReport.id = data.createReport.id
+        console.log(data)
+        resolve(true)
+      }).catch((error) => {
+        console.log(error)
+        resolve(false)
+      })
+    })
+  }
+
+  public async areaButtonClickHandler (event: any, area: Area) {
     let button = event.target
     // When the icon inside the button is clicked target the button
     if (button.tagName !== 'BUTTON') {
@@ -383,31 +453,36 @@ export default class Home extends Vue {
       return
     }
 
+    this.lastSentReport = {
+      creation_date: DateTime.local(),
+      assist_date: NULL,
+      solved_date: NULL,
+      plant: this.selectedPlant,
+      machine: this.selectedMachine,
+      category: this.selectedCategory,
+      area: area,
+      comment: this.comment
+    }
+
     const reportSent = this._sendText(area.name)
+    const reportSaved = await this._saveReport()
+
+    this.lastSentReport.sent = reportSent
+    this.lastSentReport.saved = reportSaved
+
     this._animateSendButton(button, reportSent)
 
     if (reportSent) {
-      this.lastSentReport = {
-        creation_date: new Date(),
-        assist_date: new Date(),
-        solved_date: new Date(),
-        plant: this.selectedPlant,
-        machine: this.selectedMachine,
-        category: this.selectedCategory,
-        area: area,
-        comment: this.comment
-      }
-
-      // TODO: Save report in DB
-
       this.showErrors = false
       this._clearInputs()
+      this.selectedPlant = this.lastSentReport.plant
+      await this.$nextTick()
       this.disableSendButtons = true
     } else {
       // Disable send buttons for the duration of the button's animation
       this.disableSendButtons = true
       setTimeout(() => {
-        this.disableSendButtons = false
+        this.disableSendButtons = this.hasErrors
       }, 4000)
     }
   }
@@ -629,7 +704,7 @@ export default class Home extends Vue {
     }
 
     @keyframes sent {
-      15% {
+      20% {
         transform: rotate(45deg) translateY(-1rem);
         opacity: 0;
       }

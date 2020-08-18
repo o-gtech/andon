@@ -16,6 +16,7 @@
     "core-js": "^3.6.5",
     "graphql": "^15.3.0",
     "graphql-tag": "^2.11.0",
+    "luxon": "^1.24.1",
     "primeicons": "^4.0.0",
     "primevue": "^2.0.0-rc.3",
     "register-service-worker": "^1.7.1",
@@ -27,6 +28,7 @@
     "vuex": "^3.4.0"
   },
   "devDependencies": {
+    "@types/luxon": "^1.24.3",
     "@typescript-eslint/eslint-plugin": "^2.33.0",
     "@typescript-eslint/parser": "^2.33.0",
     "@vue/cli-plugin-babel": "~4.4.0",
