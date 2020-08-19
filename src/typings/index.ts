@@ -17,12 +17,13 @@ export interface Area {
   id: string;
   name: string;
   phones: string[];
+  reportTypes: ReportType[];
 }
 
 export interface ReportType {
-  id: string;
+  id?: string;
   name: string;
-  severity: string;
+  severity: number;
 }
 
 export interface Report {

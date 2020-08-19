@@ -37,7 +37,7 @@ code {
 }
 
 .container {
-  margin: $margin-y-axis $margin-x-axis;
+  margin: $margin-y-axis $margin-x-axis #{$margin-y-axis * 2} ;
 }
 
 .header {

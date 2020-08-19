@@ -34,7 +34,7 @@
             v-model="selectedMachine"
             :options="machines"
             optionLabel="name"
-            placeholder="Selecciona la máquina"
+            :placeholder="machines ? 'Selecciona la máquina' : ''"
             :filter="machines && machines.length > 6"
             filterPlaceholder="Busca la máquina"
             :disabled="!machines"
@@ -45,29 +45,27 @@
 
       <div class="card__container selection__30-70">
         <div class="selection__wrapper">
-          <div class="selection__title">Categoría</div>
+          <div class="selection__title">Area</div>
           <Listbox class="listbox"
-            :class="{ 'p-error' : showErrors && formErrors.reportType }"
-            v-model="selectedReportType"
-            :options="reportTypes"
-            optionLabel="name"
-            listStyle="max-height: 8rem"
-            :filter="reportTypes && reportTypes.length > 6"
-            filterPlaceholder="Busca la categoría"
-            :disabled="!reportTypes"
+            :class="{ 'p-error' : showErrors && formErrors.area, 'p-disabled': !areas }"
+            v-model="selectedArea"
+            :options="areas ? areas : areasPlaceholder"
+            optionLabel="id"
+            listStyle="max-height: 8rem; min-height: 4rem;"
+            :filter="areas && areas.length > 6"
+            filterPlaceholder="Busca el area"
+            :disabled="!areas"
           >
             <template #option="slotProps">
               <div class="listbox__item">
-                <span class="listbox__item-badge p-badge"
-                  :class="'p-badge-' + getSeverityStatus(slotProps.option.severity)"
-                >
-                  {{slotProps.option.severity}}
+                <span class="listbox__item-badge p-badge p-badge-secondary">
+                  {{slotProps.option.name[0]}}
                 </span>
                 <span class="listbox__item-name">{{slotProps.option.name}}</span>
               </div>
             </template>
           </Listbox>
-          <InlineMessage severity="error" v-show="showErrors && formErrors.reportType">Selecciona una categoría</InlineMessage>
+          <InlineMessage severity="error" v-show="showErrors && formErrors.area">Selecciona un area</InlineMessage>
         </div>
         <div class="comment">
           <span class="comment__wrapper p-float-label">
@@ -77,8 +75,11 @@
               rows="2"
               :autoResize="true"
               @focus="showCommentTemplates = true"
+              :disabled="!areas"
             />
-            <label for="comment">Comentarios</label>
+            <label v-if="areas" for="comment">
+              Comentarios <span>(opcional)</span>
+            </label>
           </span>
           <div class="comment__templates" :class="{ 'comment__templates--visible': showCommentTemplates }">
             <Button class="p-button-secondary p-button-rounded"
@@ -93,20 +94,41 @@
     </div>
 
     <!-- TODO: Hide area with opacity to animate it -->
-    <div class="area card" v-show="!!areas">
-      <div class="card__title">Mandar a area</div>
+    <div class="report-type card">
+      <div class="card__title">Tipo de reporte</div>
       <div class="card__container">
-        <Button class="area__button"
-          v-for="area in areas"
-          :key="area.id"
-          @click="areaButtonClickHandler($event, area)"
-          :disabled="disableSendButtons"
-        >
-          {{ area.name }}
-          <i class="pi pi-arrow-up"></i>
-        </Button>
+        <Listbox class="listbox"
+            :class="{ 'p-error' : showErrors && formErrors.reportType, 'p-disabled': !reportTypes }"
+            v-model="selectedReportType"
+            :options="reportTypes ? reportTypes : reportTypesPlaceholder"
+            optionLabel="id"
+            listStyle="max-height: 8rem"
+            :filter="reportTypes && reportTypes.length > 6"
+            filterPlaceholder="Busca el tipo de reporte"
+            :disabled="!reportTypes"
+          >
+            <template #option="slotProps">
+              <div class="listbox__item">
+                <span class="listbox__item-badge p-badge"
+                  :class="`p-badge-${getSeverityStatus(slotProps.option.severity)}`"
+                >
+                  {{slotProps.option.severity}}
+                </span>
+                <span class="listbox__item-name">{{slotProps.option.name}}</span>
+              </div>
+            </template>
+          </Listbox>
+          <InlineMessage severity="error" v-show="showErrors && formErrors.area">Selecciona un tipo de reporte</InlineMessage>
       </div>
     </div>
+
+    <Button class="send__button"
+      @click="areaButtonClickHandler($event)"
+      :disabled="disableSendButtons"
+    >
+      Mandar reporte
+      <i class="pi pi-arrow-up"></i>
+    </Button>
   </div>
 </template>
 
@@ -129,6 +151,11 @@ const allPlantsQuery = gql`query getPlants {
       id
       name
       phones
+      reportTypes {
+        id
+        name
+        severity
+      }
     }
     machines {
       id
@@ -178,14 +205,27 @@ export default class Home extends Vue {
   // Plants
   private selectedPlant: Plant = NULL
   private plants: Plant[] = NULL
+
   // Machines
   private selectedMachine: Machine = NULL
   private machines: Machine[] = NULL
+
+  // Area
+  private selectedArea: Area = NULL
+  private areas: Area[] = NULL
+  readonly areasPlaceholder: Area[] = [
+    { id: NULL, name: 'Herramentales', phones: NULL, reportTypes: NULL },
+    { id: NULL, name: 'Operaciones', phones: NULL, reportTypes: NULL }
+  ]
+
   // ReportType
   private selectedReportType: ReportType = NULL
   private reportTypes: ReportType[] = NULL
-  // Area
-  private areas: Area[] = NULL
+  readonly reportTypesPlaceholder: ReportType[] = [
+    { id: NULL, name: 'Mantenimiento', severity: 5 },
+    { id: NULL, name: 'Fallo', severity: 9 }
+  ]
+
   // Comment
   private comment = ''
   private showCommentTemplates = false
@@ -225,6 +265,7 @@ export default class Home extends Vue {
   private formErrors = {
     plant: true,
     machine: true,
+    area: true,
     reportType: true
   }
 
@@ -238,11 +279,6 @@ export default class Home extends Vue {
     }
 
     return false
-  }
-
-  mounted () {
-    // TODO: Get reportTypes from API
-    this.reportTypes = this.getReportTypes()
   }
 
   @Ref('comment') readonly commentTextArea!: Vue
@@ -272,18 +308,33 @@ export default class Home extends Vue {
     this._checkSendButtons()
   }
 
+  @Watch('selectedArea')
+  public areaSelected () {
+    const area = this.selectedArea
+    if (area) {
+      if (area.reportTypes.length !== 0) this.reportTypes = this.sortReportTypes(area.reportTypes)
+      this.formErrors.area = false
+    } else {
+      this.formErrors.area = true
+    }
+
+    this._checkSendButtons()
+  }
+
   @Watch('selectedReportType')
   public reportTypeSelected () {
     if (this.selectedReportType) {
-      if (!this.comment) {
-        this.showCommentTemplates = true
-      }
+      if (!this.comment) this.showCommentTemplates = true
       this.formErrors.reportType = false
     } else {
       this.formErrors.reportType = true
     }
 
     this._checkSendButtons()
+  }
+
+  private log (data: any) {
+    console.log(data)
   }
 
   private _checkSendButtons () {
@@ -294,13 +345,9 @@ export default class Home extends Vue {
     }
   }
 
-  public getReportTypes (): ReportType[] {
-    const reportTypes: ReportType[] = [
-      { id: '5f139b2373bd81e112441efc', name: 'Mantenimiento', severity: '5' },
-      { id: '5f139b9473bd81e112441efe', name: 'Fallo', severity: '9' }
-    ]
+  public sortReportTypes (reportTypes: ReportType[]): ReportType[] {
     return reportTypes.sort((a, b): number => (
-      a.severity < b.severity) ? 1 : (a.severity === b.severity) ? ((a.name > b.name) ? 1 : -1) : -1
+      a.severity > b.severity) ? 1 : (a.severity === b.severity) ? ((a.name > b.name) ? 1 : -1) : -1
     )
   }
 
@@ -309,7 +356,7 @@ export default class Home extends Vue {
       return 'info'
     }
 
-    if (severity > 4 && severity < 8) {
+    if (severity >= 4 && severity <= 7) {
       return 'warning'
     }
 
@@ -343,6 +390,7 @@ export default class Home extends Vue {
     this.formErrors = {
       plant: !this.selectedPlant,
       machine: !this.selectedMachine,
+      area: !this.selectedArea,
       reportType: !this.selectedReportType
     }
 
@@ -350,7 +398,7 @@ export default class Home extends Vue {
   }
 
   private _animateSendButton (button: HTMLElement, sent: boolean) {
-    const animationClass = 'area__button--' + (sent ? 'sent' : 'error')
+    const animationClass = 'send__button--' + (sent ? 'sent' : 'error')
 
     button.classList.add(animationClass)
     button.blur()
@@ -361,10 +409,10 @@ export default class Home extends Vue {
     }, 4000)
   }
 
-  private _sendText (area: string): boolean {
+  private _sendText (): boolean {
     const message = `Máquina ${this.selectedMachine.name} de la planta ${this.selectedPlant.name}` +
                     `[${this.selectedReportType.name}]\n` +
-                    `Area ${area} notificada` + this.comment ? ` por ${this.comment}` : ''
+                    `Area ${this.selectedArea.name} notificada` + this.comment ? ` por ${this.comment}` : ''
     let messageSent = false
 
     // TODO: Send the area as argument to be able to identify to whom we are sending the message
@@ -390,6 +438,7 @@ export default class Home extends Vue {
 
     this.machines = NULL
     this.areas = NULL
+    this.reportTypes = NULL
   }
 
   private _saveReport (): Promise<boolean> {
@@ -405,27 +454,12 @@ export default class Home extends Vue {
           reportTypeID: this.lastSentReport.reportType.id,
           areaID: this.lastSentReport.area.id,
           comment: this.lastSentReport.comment
-        },
+        }
         // update: (store: any, { data: { createReport } }: any) => {
         //   const data = store.readQuery({ query: allReportsQuery })
         //   data.allReports.push(createReport)
         //   store.writeQuery({ query: allReportsQuery, data })
-        // },
-        optimisticResponse: {
-          __typename: 'Mutation',
-          createReport: {
-            __typename: 'Report',
-            id: -1,
-            creation_date: this.lastSentReport.creation_date,
-            assist_date: this.lastSentReport.assist_date,
-            solved_date: this.lastSentReport.solved_date,
-            plant: this.lastSentReport.plant.id,
-            machine: this.lastSentReport.machine.id,
-            reportType: this.lastSentReport.reportType.id,
-            area: this.lastSentReport.area.id,
-            comment: this.lastSentReport.comment
-          }
-        }
+        // }
       }).then(({ data }: any) => {
         this.lastSentReport.id = data.createReport.id
         console.log(data)
@@ -437,12 +471,8 @@ export default class Home extends Vue {
     })
   }
 
-  public async areaButtonClickHandler (event: any, area: Area) {
-    let button = event.target
-    // When the icon inside the button is clicked target the button
-    if (button.tagName !== 'BUTTON') {
-      button = event.path[1]
-    }
+  public async areaButtonClickHandler (event: any) {
+    const button = event.target
 
     this._validateForm()
 
@@ -459,23 +489,20 @@ export default class Home extends Vue {
       plant: this.selectedPlant,
       machine: this.selectedMachine,
       reportType: this.selectedReportType,
-      area: area,
+      area: this.selectedArea,
       comment: this.comment
     }
 
-    const reportSent = this._sendText(area.name)
-    const reportSaved = await this._saveReport()
+    // Send and save report
+    this.lastSentReport.sent = this._sendText()
+    this._animateSendButton(button, this.lastSentReport.sent)
 
-    this.lastSentReport.sent = reportSent
-    this.lastSentReport.saved = reportSaved
+    this.lastSentReport.saved = await this._saveReport()
 
-    this._animateSendButton(button, reportSent)
+    if (this.lastSentReport.sent || this.lastSentReport.saved) this._clearInputs()
 
-    if (reportSent) {
+    if (this.lastSentReport.sent) {
       this.showErrors = false
-      this._clearInputs()
-      this.selectedPlant = this.lastSentReport.plant
-      await this.$nextTick()
       this.disableSendButtons = true
     } else {
       // Disable send buttons for the duration of the button's animation
@@ -504,7 +531,7 @@ export default class Home extends Vue {
   > .card {
     margin-bottom: 1.5rem;
 
-    &:last-child {
+    &:last-of-type {
       margin-bottom: 2rem;
     }
   }
@@ -540,6 +567,21 @@ export default class Home extends Vue {
 
     &:last-of-type {
       margin-bottom: 0;
+    }
+  }
+}
+
+.listbox {
+  &__item {
+    display: block;
+    white-space: nowrap;
+
+    &-badge {
+      margin-right: 0.5rem;
+    }
+
+    &-name {
+      vertical-align: middle;
     }
   }
 }
@@ -595,21 +637,6 @@ export default class Home extends Vue {
     .dropdown {
       width: 100%;
     }
-
-    .listbox {
-      &__item {
-        display: block;
-        white-space: nowrap;
-
-        &-badge {
-          margin-right: 0.5rem;
-        }
-
-        &-name {
-          vertical-align: middle;
-        }
-      }
-    }
   }
 
   .comment {
@@ -622,11 +649,9 @@ export default class Home extends Vue {
         width: 100%;
       }
 
-      label::after {
-        font-size: .75rem;
-        margin-left: .25rem;
+      label span {
+        font-size: .8rem;
         color: var(--text-color-secondary);
-        content: "(opcional)";
       }
 
       input:focus ~ label,
@@ -659,88 +684,91 @@ export default class Home extends Vue {
   }
 }
 
-.area {
+.report-type {
   .card__container {
-    @include gap-between-items(1.25rem, button);
+    @include gap-between-items(1.25rem);
+
+    .listbox {
+      width: 100%;
+    }
+  }
+}
+
+.send__button {
+  display: flex;
+  text-align: center;
+  font-size: 1rem;
+  margin-left: auto;
+  margin-right: 2rem;
+  transition: all .2s ease;
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, .1),
+    0 1px 3px rgba(0, 0, 0, .08);
+
+  i {
+    transition: transform .3s ease;
+    margin-left: .25rem;
+    transform: rotate(45deg);
   }
 
-  &__button {
-    display: flex;
-    flex-grow: 1;
-    text-align: center;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.15rem;
-    transition: all .2s ease;
-    box-shadow:
-      0 4px 6px rgba(0, 0, 0, .1),
-      0 1px 3px rgba(0, 0, 0, .08);
-
-    @mixin icon-transformation() {
-      i {
-        transform: rotate(45deg) translateY(-3px);
-      }
-    }
-
-    &:focus {
-      @include icon-transformation;
-    }
-
-    @media (hover) {
-      &:hover {
-        @include icon-transformation;
-
-        box-shadow:
-          0 7px 14px rgba(0, 0, 0, .1),
-          0 3px 6px rgba(0, 0, 0, .08);
-      }
-    }
-
+  @mixin icon-transformation() {
     i {
-      transition: transform .3s ease;
-      margin-left: .25rem;
-      transform: rotate(45deg);
+      transform: rotate(45deg) translateY(-3px);
     }
+  }
 
-    @keyframes sent {
-      20% {
-        transform: rotate(45deg) translateY(-1rem);
-        opacity: 0;
-      }
-      75% {
-        transform: rotate(45deg) translateY(-3px);
-        opacity: 0;
-      }
-      100% {
-        transform: rotate(45deg) translateY(0);
-        opacity: 1;
-      }
+  &:focus {
+    @include icon-transformation;
+  }
+
+  @media (hover) {
+    &:hover {
+      @include icon-transformation;
+
+      box-shadow:
+        0 7px 14px rgba(0, 0, 0, .1),
+        0 3px 6px rgba(0, 0, 0, .08);
     }
+  }
 
-    @keyframes send-error {
-      50% {
-        transform: rotate(45deg) translate(50%, 50%);
-        opacity: 0;
-      }
-      75% {
-        transform: rotate(45deg) translate(0);
-        opacity: 0;
-      }
-      100% {
-        opacity: 1;
-      }
+  @keyframes sent {
+    20% {
+      transform: rotate(45deg) translateY(-1rem);
+      opacity: 0;
     }
-
-    &--sent {
-      i {
-        animation: sent 4s;
-      }
+    75% {
+      transform: rotate(45deg) translateY(-3px);
+      opacity: 0;
     }
+    100% {
+      transform: rotate(45deg) translateY(0);
+      opacity: 1;
+    }
+  }
 
-    &--error {
-      i {
-        animation: send-error 4s;
-      }
+  @keyframes send-error {
+    50% {
+      transform: rotate(45deg) translate(50%, 50%);
+      opacity: 0;
+    }
+    75% {
+      transform: rotate(45deg) translate(0);
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+
+  &--sent {
+    i {
+      animation: sent 4s;
+    }
+  }
+
+  &--error {
+    i {
+      animation: send-error 4s;
     }
   }
 }
