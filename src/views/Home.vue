@@ -5,7 +5,7 @@
       <ActionsMenu
         :disableRestore="!lastSentReport"
         v-on:restore="restoreReport()"
-        :disableClear="!selectedPlant && !selectedMachine && !selectedCategory && !comment"
+        :disableClear="!selectedPlant && !selectedMachine && !selectedReportType && !comment"
         v-on:clear="clearReport()"
       />
     </div>
@@ -47,14 +47,14 @@
         <div class="selection__wrapper">
           <div class="selection__title">Categoría</div>
           <Listbox class="listbox"
-            :class="{ 'p-error' : showErrors && formErrors.category }"
-            v-model="selectedCategory"
-            :options="categories"
+            :class="{ 'p-error' : showErrors && formErrors.reportType }"
+            v-model="selectedReportType"
+            :options="reportTypes"
             optionLabel="name"
             listStyle="max-height: 8rem"
-            :filter="categories && categories.length > 6"
+            :filter="reportTypes && reportTypes.length > 6"
             filterPlaceholder="Busca la categoría"
-            :disabled="!categories"
+            :disabled="!reportTypes"
           >
             <template #option="slotProps">
               <div class="listbox__item">
@@ -67,7 +67,7 @@
               </div>
             </template>
           </Listbox>
-          <InlineMessage severity="error" v-show="showErrors && formErrors.category">Selecciona una categoría</InlineMessage>
+          <InlineMessage severity="error" v-show="showErrors && formErrors.reportType">Selecciona una categoría</InlineMessage>
         </div>
         <div class="comment">
           <span class="comment__wrapper p-float-label">
@@ -115,7 +115,7 @@ import { Vue, Component, Watch, Ref } from 'vue-property-decorator'
 import gql from 'graphql-tag'
 import { DateTime } from 'luxon'
 
-import { Plant, Machine, Area, Category, Report } from '../typings'
+import { Plant, Machine, Area, ReportType, Report } from '../typings'
 import MessageService from '../services/MessageService'
 import ActionsMenu from '../components/ActionsMenu.vue'
 
@@ -142,7 +142,7 @@ const createReportMutation = gql`mutation CreateReport(
   $creationDate: DateTime!,
   $assistDate: DateTime,
   $solvedDate: DateTime,
-  $categoryID: String!,
+  $reportTypeID: ID!,
   $plantID: ID!,
   $areaID: ID!,
   $machineID: ID!,
@@ -152,7 +152,7 @@ const createReportMutation = gql`mutation CreateReport(
     creation_date: $creationDate,
     assist_date: $assistDate,
     solved_date: $solvedDate,
-    category: $categoryID,
+    reportType: $reportTypeID,
     plant: $plantID,
     area: $areaID,
     machine: $machineID,
@@ -181,9 +181,9 @@ export default class Home extends Vue {
   // Machines
   private selectedMachine: Machine = NULL
   private machines: Machine[] = NULL
-  // Category
-  private selectedCategory: Category = NULL
-  private categories: Category[] = NULL
+  // ReportType
+  private selectedReportType: ReportType = NULL
+  private reportTypes: ReportType[] = NULL
   // Area
   private areas: Area[] = NULL
   // Comment
@@ -225,7 +225,7 @@ export default class Home extends Vue {
   private formErrors = {
     plant: true,
     machine: true,
-    category: true
+    reportType: true
   }
 
   get hasErrors (): boolean {
@@ -241,8 +241,8 @@ export default class Home extends Vue {
   }
 
   mounted () {
-    // TODO: Get categories from API
-    this.categories = this.getCategories()
+    // TODO: Get reportTypes from API
+    this.reportTypes = this.getReportTypes()
   }
 
   @Ref('comment') readonly commentTextArea!: Vue
@@ -272,15 +272,15 @@ export default class Home extends Vue {
     this._checkSendButtons()
   }
 
-  @Watch('selectedCategory')
-  public categorySelected () {
-    if (this.selectedCategory) {
+  @Watch('selectedReportType')
+  public reportTypeSelected () {
+    if (this.selectedReportType) {
       if (!this.comment) {
         this.showCommentTemplates = true
       }
-      this.formErrors.category = false
+      this.formErrors.reportType = false
     } else {
-      this.formErrors.category = true
+      this.formErrors.reportType = true
     }
 
     this._checkSendButtons()
@@ -294,14 +294,12 @@ export default class Home extends Vue {
     }
   }
 
-  public getCategories (): Category[] {
-    const categories: Category[] = [
-      { id: '0', name: 'Mantenimiento', severity: '5' },
-      { id: '1', name: 'Fallo', severity: '9' },
-      { id: '2', name: 'Ajustes', severity: '2' },
-      { id: '3', name: 'Falta', severity: '5' }
+  public getReportTypes (): ReportType[] {
+    const reportTypes: ReportType[] = [
+      { id: '5f139b2373bd81e112441efc', name: 'Mantenimiento', severity: '5' },
+      { id: '5f139b9473bd81e112441efe', name: 'Fallo', severity: '9' }
     ]
-    return categories.sort((a, b): number => (
+    return reportTypes.sort((a, b): number => (
       a.severity < b.severity) ? 1 : (a.severity === b.severity) ? ((a.name > b.name) ? 1 : -1) : -1
     )
   }
@@ -331,7 +329,7 @@ export default class Home extends Vue {
     if (this.lastSentReport) {
       this.selectedPlant = this.lastSentReport.plant
       this.selectedMachine = this.lastSentReport.machine
-      this.selectedCategory = this.lastSentReport.category
+      this.selectedReportType = this.lastSentReport.reportType
       this.comment = this.lastSentReport.comment
     }
   }
@@ -345,7 +343,7 @@ export default class Home extends Vue {
     this.formErrors = {
       plant: !this.selectedPlant,
       machine: !this.selectedMachine,
-      category: !this.selectedCategory
+      reportType: !this.selectedReportType
     }
 
     this.showErrors = this.hasErrors
@@ -364,7 +362,8 @@ export default class Home extends Vue {
   }
 
   private _sendText (area: string): boolean {
-    const message = `Máquina ${this.selectedMachine.name} de la planta ${this.selectedPlant.name} [${this.selectedCategory.name}]\n` +
+    const message = `Máquina ${this.selectedMachine.name} de la planta ${this.selectedPlant.name}` +
+                    `[${this.selectedReportType.name}]\n` +
                     `Area ${area} notificada` + this.comment ? ` por ${this.comment}` : ''
     let messageSent = false
 
@@ -386,7 +385,7 @@ export default class Home extends Vue {
   private _clearInputs () {
     this.selectedPlant = NULL
     this.selectedMachine = NULL
-    this.selectedCategory = NULL
+    this.selectedReportType = NULL
     this.comment = ''
 
     this.machines = NULL
@@ -403,7 +402,7 @@ export default class Home extends Vue {
           solvedDate: this.lastSentReport.solved_date,
           plantID: this.lastSentReport.plant.id,
           machineID: this.lastSentReport.machine.id,
-          categoryID: this.lastSentReport.category.id,
+          reportTypeID: this.lastSentReport.reportType.id,
           areaID: this.lastSentReport.area.id,
           comment: this.lastSentReport.comment
         },
@@ -422,7 +421,7 @@ export default class Home extends Vue {
             solved_date: this.lastSentReport.solved_date,
             plant: this.lastSentReport.plant.id,
             machine: this.lastSentReport.machine.id,
-            category: this.lastSentReport.category.id,
+            reportType: this.lastSentReport.reportType.id,
             area: this.lastSentReport.area.id,
             comment: this.lastSentReport.comment
           }
@@ -432,7 +431,7 @@ export default class Home extends Vue {
         console.log(data)
         resolve(true)
       }).catch((error) => {
-        console.log(error)
+        console.error(error)
         resolve(false)
       })
     })
@@ -459,7 +458,7 @@ export default class Home extends Vue {
       solved_date: NULL,
       plant: this.selectedPlant,
       machine: this.selectedMachine,
-      category: this.selectedCategory,
+      reportType: this.selectedReportType,
       area: area,
       comment: this.comment
     }

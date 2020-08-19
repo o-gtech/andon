@@ -19,7 +19,7 @@ export interface Area {
   phones: string[];
 }
 
-export interface Category {
+export interface ReportType {
   id: string;
   name: string;
   severity: string;
@@ -32,8 +32,8 @@ export interface Report {
   solved_date: Date | DateTime;
   plant: Plant;
   machine: Machine;
-  category: Category;
   area: Area;
+  reportType: ReportType;
   comment: string;
 
   saved?: boolean;
