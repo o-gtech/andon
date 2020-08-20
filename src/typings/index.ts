@@ -21,7 +21,7 @@ export interface Area {
 }
 
 export interface ReportType {
-  id?: string;
+  id: string;
   name: string;
   severity: number;
 }

@@ -43,7 +43,7 @@
         </div>
       </div>
 
-      <div class="card__container selection__30-70">
+      <div class="card__container selection__50-50">
         <div class="selection__wrapper">
           <div class="selection__title">Area</div>
           <Listbox class="listbox"
@@ -51,7 +51,7 @@
             v-model="selectedArea"
             :options="areas ? areas : areasPlaceholder"
             optionLabel="id"
-            listStyle="max-height: 8rem; min-height: 4rem;"
+            listStyle="max-height: 8rem"
             :filter="areas && areas.length > 6"
             filterPlaceholder="Busca el area"
             :disabled="!areas"
@@ -67,37 +67,9 @@
           </Listbox>
           <InlineMessage severity="error" v-show="showErrors && formErrors.area">Selecciona un area</InlineMessage>
         </div>
-        <div class="comment">
-          <span class="comment__wrapper p-float-label">
-            <Textarea id="comment"
-              ref="comment"
-              v-model="comment"
-              rows="2"
-              :autoResize="true"
-              @focus="showCommentTemplates = true"
-              :disabled="!areas"
-            />
-            <label v-if="areas" for="comment">
-              Comentarios <span>(opcional)</span>
-            </label>
-          </span>
-          <div class="comment__templates" :class="{ 'comment__templates--visible': showCommentTemplates }">
-            <Button class="p-button-secondary p-button-rounded"
-              v-for="(value, index) in commentTemplates"
-              :key="index"
-              :label="value.comment + (value.edit ? '...' : '')"
-              @click="setComment(value.comment, value.edit)"
-            />
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TODO: Hide area with opacity to animate it -->
-    <div class="report-type card">
-      <div class="card__title">Tipo de reporte</div>
-      <div class="card__container">
-        <Listbox class="listbox"
+        <div class="selection__wrapper">
+          <div class="selection__title">Tipo de reporte</div>
+          <Listbox class="listbox"
             :class="{ 'p-error' : showErrors && formErrors.reportType, 'p-disabled': !reportTypes }"
             v-model="selectedReportType"
             :options="reportTypes ? reportTypes : reportTypesPlaceholder"
@@ -119,16 +91,45 @@
             </template>
           </Listbox>
           <InlineMessage severity="error" v-show="showErrors && formErrors.area">Selecciona un tipo de reporte</InlineMessage>
+        </div>
+      </div>
+      <div class="card__container">
+        <div class="comment selection__wrapper">
+          <div class="selection__title">Comentarios (opcional)</div>
+          <Textarea id="comment"
+            ref="comment"
+            v-model="comment"
+            rows="3"
+            :autoResize="true"
+            @focus="showCommentTemplates = true"
+            :disabled="!reportTypes"
+            placeholder="Comentarios, observaciónes y/o notas extra que se quiera añadir..."
+          />
+          <div class="comment__templates" :class="{ 'comment__templates--visible': showCommentTemplates }">
+            <Button class="p-button-secondary p-button-rounded"
+              v-for="(value, index) in commentTemplates"
+              :key="index"
+              :label="value.comment + (value.edit ? '...' : '')"
+              @click="setCommentInTextarea(value.comment, value.edit)"
+            />
+          </div>
+        </div>
       </div>
     </div>
 
-    <Button class="send__button"
-      @click="areaButtonClickHandler($event)"
-      :disabled="disableSendButtons"
-    >
-      Mandar reporte
-      <i class="pi pi-arrow-up"></i>
-    </Button>
+    <div class="send card card--no-background">
+      <!-- <div class="card__title">Status del reporte</div> -->
+      <div class="card__container">
+        <Button class="send__button"
+          @click="areaButtonClickHandler($event)"
+          :disabled="disableSendButtons"
+        >
+          Mandar reporte
+          <i class="pi pi-arrow-up"></i>
+        </Button>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -363,7 +364,7 @@ export default class Home extends Vue {
     return 'danger'
   }
 
-  public setComment (text: string, edit: boolean): void {
+  public setCommentInTextarea (text: string, edit: boolean): void {
     this.comment = text
     if (edit) {
       const commentTextArea = this.commentTextArea.$el as HTMLTextAreaElement
@@ -528,14 +529,6 @@ export default class Home extends Vue {
 }
 
 .home {
-  > .card {
-    margin-bottom: 1.5rem;
-
-    &:last-of-type {
-      margin-bottom: 2rem;
-    }
-  }
-
   &__header {
     display: flex;
     flex-direction: row;
@@ -551,9 +544,14 @@ export default class Home extends Vue {
 
 .card {
   background-color: var(--surface-e);
+  box-shadow: 0 0 12px -2px rgba(0, 0, 0, .1);
   padding: 2rem;
   border-radius: 6px;
-  box-shadow: 0 0 12px -2px rgba(0, 0, 0, .1);
+
+  &--no-background {
+    background-color: inherit;
+    box-shadow: none;
+  }
 
   &__title {
     font-size: 1.4rem;
@@ -571,21 +569,6 @@ export default class Home extends Vue {
   }
 }
 
-.listbox {
-  &__item {
-    display: block;
-    white-space: nowrap;
-
-    &-badge {
-      margin-right: 0.5rem;
-    }
-
-    &-name {
-      vertical-align: middle;
-    }
-  }
-}
-
 .selection {
   $gap: 1rem;
   $label-size: 1rem;
@@ -598,7 +581,7 @@ export default class Home extends Vue {
   }
 
   &__50-50 {
-    margin-bottom: 2rem !important;
+    margin-bottom: 1.5rem !important;
 
     > * {
       $width: calc(50% - #{$gap});
@@ -621,48 +604,48 @@ export default class Home extends Vue {
   }
 
   &__wrapper {
+    margin-top: 1.5rem !important;
+
     .selection__title {
       font-size: $label-size;
-      margin: 0 0 .25rem .5rem;
+      margin: 0 0 .5rem .5rem;
     }
 
     .p-error {
       border-color: #f44336;
     }
 
-    .p-inline-message {
+    .dropdown {
       width: 100%;
     }
 
-    .dropdown {
+    .listbox {
+      &__item {
+        display: block;
+        white-space: nowrap;
+
+        &-badge {
+          margin-right: 0.5rem;
+        }
+
+        &-name {
+          vertical-align: middle;
+        }
+      }
+    }
+
+    .p-inline-message {
       width: 100%;
     }
   }
 
   .comment {
     display: flex;
-    flex-flow: column wrap;
-    margin-top: 2.5rem;
+    flex-direction: column;
 
-    &__wrapper {
-      textarea {
-        width: 100%;
-      }
-
-      label span {
-        font-size: .8rem;
-        color: var(--text-color-secondary);
-      }
-
-      input:focus ~ label,
-      input.p-filled ~ label,
-      textarea:focus ~ label,
-      textarea.p-filled ~ label,
-      .p-inputwrapper-focus ~ label,
-      .p-inputwrapper-filled ~ label {
-        font-size: $label-size !important;
-        color: var(--text-color) !important;
-      }
+    textarea {
+      width: 100%;
+      flex: 0 0 auto;
     }
 
     &__templates {
@@ -673,7 +656,7 @@ export default class Home extends Vue {
       height: 0;
       display: flex;
       flex-wrap: wrap;
-      padding: .5rem .25rem;
+      padding: .75rem .25rem 0;
       transition: opacity .5s, height .5s;
 
       &--visible {
@@ -684,91 +667,88 @@ export default class Home extends Vue {
   }
 }
 
-.report-type {
-  .card__container {
-    @include gap-between-items(1.25rem);
+.send {
+  &__button {
+    display: flex;
+    font-size: 1rem;
+    justify-content: center;
+    margin: 0;
+    transition: all .2s ease;
+    width: 100%;
+    box-shadow:
+      0 4px 6px rgba(0, 0, 0, .1),
+      0 1px 3px rgba(0, 0, 0, .08);
 
-    .listbox {
-      width: 100%;
+    @media screen and (min-width: 768px) {
+      margin-left: auto !important;
+      width: auto;
     }
-  }
-}
 
-.send__button {
-  display: flex;
-  text-align: center;
-  font-size: 1rem;
-  margin-left: auto;
-  margin-right: 2rem;
-  transition: all .2s ease;
-  box-shadow:
-    0 4px 6px rgba(0, 0, 0, .1),
-    0 1px 3px rgba(0, 0, 0, .08);
-
-  i {
-    transition: transform .3s ease;
-    margin-left: .25rem;
-    transform: rotate(45deg);
-  }
-
-  @mixin icon-transformation() {
     i {
-      transform: rotate(45deg) translateY(-3px);
+      transition: transform .3s ease;
+      margin-left: .25rem;
+      transform: rotate(45deg);
     }
-  }
 
-  &:focus {
-    @include icon-transformation;
-  }
+    @mixin icon-transformation() {
+      i {
+        transform: rotate(45deg) translateY(-3px);
+      }
+    }
 
-  @media (hover) {
-    &:hover {
+    &:focus {
       @include icon-transformation;
+    }
 
-      box-shadow:
-        0 7px 14px rgba(0, 0, 0, .1),
-        0 3px 6px rgba(0, 0, 0, .08);
-    }
-  }
+    @media (hover) {
+      &:hover {
+        @include icon-transformation;
 
-  @keyframes sent {
-    20% {
-      transform: rotate(45deg) translateY(-1rem);
-      opacity: 0;
+        box-shadow:
+          0 7px 14px rgba(0, 0, 0, .1),
+          0 3px 6px rgba(0, 0, 0, .08);
+      }
     }
-    75% {
-      transform: rotate(45deg) translateY(-3px);
-      opacity: 0;
-    }
-    100% {
-      transform: rotate(45deg) translateY(0);
-      opacity: 1;
-    }
-  }
 
-  @keyframes send-error {
-    50% {
-      transform: rotate(45deg) translate(50%, 50%);
-      opacity: 0;
+    @keyframes sent {
+      20% {
+        transform: rotate(45deg) translateY(-1rem);
+        opacity: 0;
+      }
+      75% {
+        transform: rotate(45deg) translateY(-3px);
+        opacity: 0;
+      }
+      100% {
+        transform: rotate(45deg) translateY(0);
+        opacity: 1;
+      }
     }
-    75% {
-      transform: rotate(45deg) translate(0);
-      opacity: 0;
-    }
-    100% {
-      opacity: 1;
-    }
-  }
 
-  &--sent {
-    i {
-      animation: sent 4s;
+    @keyframes send-error {
+      50% {
+        transform: rotate(45deg) translate(50%, 50%);
+        opacity: 0;
+      }
+      75% {
+        transform: rotate(45deg) translate(0);
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
     }
-  }
 
-  &--error {
-    i {
-      animation: send-error 4s;
+    &--sent {
+      i {
+        animation: sent 4s;
+      }
+    }
+
+    &--error {
+      i {
+        animation: send-error 4s;
+      }
     }
   }
 }
